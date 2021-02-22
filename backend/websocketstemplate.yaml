@@ -1,0 +1,385 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Backend for Websockets (including functions)
+
+Globals:
+  Function:
+    Runtime: nodejs12.x
+    Handler: app.handler
+    MemorySize: 512 
+    Timeout: 10
+    Tracing: Active
+    Environment:
+      Variables:
+        AWS_EMF_NAMESPACE: !Sub "${EMFNamespace}"
+    Layers:
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:12"
+
+Parameters:
+  ConnectionsTable:
+    Type: String
+    Description: Connections Table Name
+  GamePlayersTable:
+    Type: String
+    Description: Table name for players in a live game
+  ActiveGamesTable:
+    Type: String
+    Description: Current active / hosted games table
+  PlayerInventoryTable:
+    Type: String
+    Description: Player inventory table
+  PlayerWalletTable:
+    Type: String
+    Description: Player wallet table
+  HighScoreTable:
+    Type: String
+    Description: Table for game high scores
+  GamesDetailTable:
+    Type: String
+    Description: Table for Game Questions
+  PlayerProgressTopicName:
+    Type: String
+    Description: Topic Name for sending player progress
+  PlayerProgressTopicArn:
+    Type: String
+    Description: Topic Arn for sending player progress
+  UserPoolID:
+    Type: String
+    Description: Cognito User Pool ID for users
+  LogRetentionDays:
+    Type: Number
+    Description: CloudWatch Log Retention Days
+  ResourceGroupName:
+    Type: String
+    Description: Name of the ResourceGroup for resources in this template
+  EMFNamespace:
+    Type: String
+    Description: Name of the EMF Namespace
+  UtilsLayer:
+    Type: String
+    Description: Utils layer  
+  QuizSourceStreamName:
+    Type: String
+    Description: Stream for results
+
+Resources:
+  ResourceGroup:
+    Type: "AWS::ResourceGroups::Group"
+    Properties:
+      Name: !Sub "${ResourceGroupName}"
+  SendChatLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'chatlayer--${AWS::StackName}'
+      Description: SendChat back via WebSockets
+      ContentUri: dependencies/sendchatlayer/nodejs/sendchatlayer.zip
+      CompatibleRuntimes:
+        - nodejs12.x
+      LicenseInfo: 'MIT'
+      RetentionPolicy: Retain
+  WebSocket:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: WebSocket
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: "$request.body.message"
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocket
+      RouteKey: $connect
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref WSAuthorizer
+      OperationName: ConnectRoute
+      Target: !Join
+        - '/'
+        - - 'integrations'
+          - !Ref ConnectInteg
+  ConnectInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocket
+      Description: Connect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: 
+        Fn::Sub:
+            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnConnectFunction.Arn}/invocations
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocket
+      RouteKey: $disconnect
+      AuthorizationType: NONE
+      OperationName: DisconnectRoute
+      Target: !Join
+        - '/'
+        - - 'integrations'
+          - !Ref DisconnectInteg
+  DisconnectInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocket
+      Description: Disconnect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: 
+        Fn::Sub:
+            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OnDisconnectFunction.Arn}/invocations
+  LiveGameAdminRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocket
+      RouteKey: liveadmin
+      AuthorizationType: NONE
+      OperationName: LiveAdminRoute
+      Target: !Join
+        - '/'
+        - - 'integrations'
+          - !Ref LiveGameAdminInteg
+  LiveGameAdminInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocket
+      Description: LiveGameAdmin Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: 
+        Fn::Sub:
+            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LiveGameAdminFunction.Arn}/invocations
+  LiveGamePlayerRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref WebSocket
+      RouteKey: liveplayer
+      AuthorizationType: NONE
+      OperationName: LivePlayerRoute
+      Target: !Sub 'integrations/${LiveGamePlayerInteg}'
+  LiveGamePlayerInteg:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref WebSocket
+      Description: LiveGamePlayer Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LiveGamePlayerFunction.Arn}/invocations'
+  WebSocketDeployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+    - ConnectRoute
+    - DisconnectRoute
+    - LiveGamePlayerRoute
+    - LiveGameAdminRoute
+    - WSAuthorizer
+    Properties:
+      ApiId: !Ref WebSocket
+  WebSocketStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      StageName: Prod
+      Description: Prod Stage
+      DeploymentId: !Ref WebSocketDeployment
+      ApiId: !Ref WebSocket
+  OnConnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/WebSockets/onconnect/
+      Environment:
+        Variables:
+          CONNECTIONS_TABLE_NAME: !Sub "${ConnectionsTable}"
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Sub "${ConnectionsTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+  OnConnectFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: 14
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref OnConnectFunction]]
+  OnConnectPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebSocket
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref OnConnectFunction
+      Principal: apigateway.amazonaws.com
+  OnDisconnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/WebSockets/ondisconnect/
+      Environment:
+        Variables:
+          CONNECTIONS_TABLE_NAME: !Sub "${ConnectionsTable}"
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${ConnectionsTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+  OnDisconnectFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: 14
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref OnDisconnectFunction]]
+  OnDisconnectPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebSocket
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref OnDisconnectFunction
+      Principal: apigateway.amazonaws.com
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/WebSockets/auth/
+      Environment:
+        Variables:
+          REGION: !Sub "${AWS::Region}"
+          POOL_ID:  !Sub "${UserPoolID}"
+          API_ID: !Ref WebSocket
+          STAGE: Prod 
+  AuthorizerFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref AuthorizerFunction]]
+  AuthorizerPermissions:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebSocket
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AuthorizerFunction
+      Principal: apigateway.amazonaws.com
+  WSAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties: 
+      AuthorizerType: REQUEST
+      ApiId: !Ref WebSocket
+      IdentitySource: 
+        - route.request.querystring.access_token
+      AuthorizerUri: !Join
+        - ''
+        - - "arn:aws:apigateway:"
+          - !Sub ${AWS::Region}
+          - ":lambda:path/2015-03-31/functions/"
+          - !GetAtt AuthorizerFunction.Arn
+          - "/invocations"
+      Name: WSAuth
+  LiveGamePlayerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/WebSockets/livegameplayer/
+      MemorySize: 1536
+      Layers: 
+        - !Ref SendChatLayer
+      Environment:
+        Variables:
+          GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
+          PLAYERS_TABLE_NAME: !Sub "${GamePlayersTable}"
+          REGION: !Sub "${AWS::Region}"
+          CONNECTIONS_TABLE_NAME: !Sub "${ConnectionsTable}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${GamePlayersTable}"
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${ActiveGamesTable}"
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${ConnectionsTable}"
+        - !Ref WebSocketManageConnectionsPolicy
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+  LiveGamePlayerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref LiveGamePlayerFunction]]
+  LiveGamePlayerPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebSocket
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LiveGamePlayerFunction
+      Principal: apigateway.amazonaws.com
+  LiveGameAdminFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/WebSockets/livegameadmin/
+      MemorySize: 1536
+      Layers: 
+        - !Ref SendChatLayer
+      Environment:
+        Variables:
+          SCORES_TABLE_NAME: !Sub "${HighScoreTable}"
+          GAMES_DETAIL_TABLE_NAME: !Sub "${GamesDetailTable}"
+          PLAYERS_TABLE_NAME: !Sub "${GamePlayersTable}"
+          PLAYER_PROGRESS_TOPIC: !Sub "${PlayerProgressTopicArn}"
+          PLAYER_INVENTORY_TABLE_NAME: !Sub "${PlayerInventoryTable}"
+          GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
+          CONNECTIONS_TABLE_NAME: !Sub "${ConnectionsTable}"
+          RESPONSE_STREAM: !Sub "${QuizSourceStreamName}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - KinesisCrudPolicy:
+            StreamName: !Sub "${QuizSourceStreamName}"
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${ConnectionsTable}"
+        - SNSPublishMessagePolicy:
+            TopicName: !Sub "${PlayerProgressTopicName}"
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${HighScoreTable}"
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${ActiveGamesTable}"
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${GamePlayersTable}"
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${GamesDetailTable}"
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${PlayerInventoryTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - !Ref WebSocketManageConnectionsPolicy
+  LiveGameAdminFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref LiveGameAdminFunction]]
+  LiveGameAdminPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+      - WebSocket
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LiveGameAdminFunction
+      Principal: apigateway.amazonaws.com
+      
+  WebSocketManageConnectionsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join ["", [!Ref "AWS::StackName", "WebSocketManageConnectionsPolicy" ] ] 
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: Allow
+            Action:
+            - 'execute-api:ManageConnections'
+            Resource:
+            - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocket}/*'
+  
+Outputs:
+  WebSocketURI:
+    Description: "The WSS Protocol URI to connect to"
+    Value: !Join [ '', [ 'wss://', !Ref WebSocket, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com/',!Ref 'WebSocketStage'] ]
+    
+  WebSocketAPIGWId:
+    Description: "ID of the API Gateway used for websockets"
+    Value: !Ref WebSocket
+    Export:
+      Name: !Sub "${AWS::StackName}-APIGWID"
+
+  Stage:
+    Description: "Stage for WS API"
+    Value: !Ref WebSocketStage

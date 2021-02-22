@@ -1,0 +1,14 @@
+{
+  "name": "game_listonmarketplace",
+  "version": "1.0.0",
+  "description": "Submit a game to list on the marketplace",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

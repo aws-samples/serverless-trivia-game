@@ -1,0 +1,15 @@
+{
+  "name": "marketplace_get",
+  "version": "1.0.0",
+  "description": "Browse the marketplace",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-embedded-metrics": "^2.0.1",
+    "aws-sdk": "^2.771.0"
+  }
+}

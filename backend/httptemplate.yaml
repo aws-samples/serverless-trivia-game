@@ -1,0 +1,811 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Backend using HTTP (including functions)
+
+Globals:
+  Function:
+    Runtime: nodejs12.x
+    Handler: app.handler
+    MemorySize: 512 
+    Timeout: 10
+    Tracing: Active
+    Environment:
+      Variables:
+        AWS_EMF_NAMESPACE: !Sub "${EMFNamespace}"
+    Layers:
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:12"
+
+Parameters:
+  ActiveGamesTable:
+    Type: String
+    Description: Current active / hosted games table
+  PlayerInventoryTable:
+    Type: String
+    Description: Player inventory table
+  PlayerWalletTable:
+    Type: String
+    Description: Player wallet table
+  HighScoreTable:
+    Type: String
+    Description: Table for game high scores
+  GamesDetailTable:
+    Type: String
+    Description: Table for Game Questions
+  PlayerTable:
+    Type: String
+    Description: Table for Player Profiles
+  PlayerProgressTable:
+    Type: String
+    Description: Table for Player Progress
+  MarketplaceTable:
+    Type: String
+    Description: Table for Marketplace
+  PlayerProgressTopicName:
+    Type: String
+    Description: Topic Name for sending player progress
+  PlayerProgressTopicArn:
+    Type: String
+    Description: Topic Arn for sending player progress
+  LeaderboardTopicName:
+    Type: String
+    Description: Topic Name for sending leaderboard entries
+  LeaderboardTopicArn:
+    Type: String
+    Description: Topic Arn for sending leaderboard data
+  PlayerWalletTopicName:
+    Type: String
+    Description: Topic Name for sending playerwallet entries
+  PlayerWalletTopicArn:
+    Type: String
+    Description: Topic Arn for sending playerwallet data
+  UserPoolID:
+    Type: String
+    Description: Cognito User Pool ID for users
+  AppClientID:
+    Type: String
+    Description: Cognito App Client ID
+  LogRetentionDays:
+    Type: Number
+    Description: Number of days to retain CloudWatch Logs for
+  ResourceGroupName:
+    Type: String
+    Description: Name of the ResourceGroup for resources in this template
+  EMFNamespace:
+    Type: String
+    Description: Name of the EMF Namespace  
+  UtilsLayer:
+    Type: String
+    Description: Utils layer
+  PurchaseSourceStreamName:
+    Type: String
+    Description: Stream for purchases
+  QuizSourceStreamName:
+    Type: String
+    Description: Stream for results
+
+Resources:
+  ResourceGroup:
+    Type: "AWS::ResourceGroups::Group"
+    Properties:
+      Name: !Sub "${ResourceGroupName}"
+  MyGamesListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/mygames_list/
+      MemorySize: 512
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE: !Sub "${PlayerInventoryTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${PlayerInventoryTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Auth: 
+              Authorizer: HTTPAuthorizer
+            Method: GET
+            Path: /players/{playerId}/games
+  MyGamesListFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref MyGamesListFunction]]
+
+  PlayerGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/player_get/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_TABLE_NAME: !Sub "${PlayerTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${PlayerTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Auth: 
+              Authorizer: HTTPAuthorizer
+            Method: GET
+            Path: /players/{playerId}
+  PlayerGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerGetFunction]]
+
+  PlayerPutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/player_put/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_TABLE_NAME: !Sub "${PlayerTable}"
+          PLAYER_AVATAR_BUCKET: !Ref AvatarBucket
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Sub "${PlayerTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Auth: 
+              Authorizer: HTTPAuthorizer
+            Method: PUT
+            Path: /players/{playerId}
+  PlayerPutFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerPutFunction]]
+
+  PlayerProgressGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/playerprogression_get/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_PROGRESS_TABLE_NAME: !Sub "${PlayerProgressTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${PlayerProgressTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Auth: 
+              Authorizer: HTTPAuthorizer
+            Method: GET
+            Path: /players/{playerId}/progress
+  PlayerProgressGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerProgressGetFunction]]
+
+  GameGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/game_get/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          GAMES_DETAIL_TABLE_NAME: !Sub "${GamesDetailTable}"
+          PLAYER_INVENTORY_TABLE_NAME: !Sub "${PlayerInventoryTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${GamesDetailTable}"
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${PlayerInventoryTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Auth:
+              Authorizer: HTTPAuthorizer
+            Method: GET
+            Path: /players/{playerId}/games/{gameId}
+  GameGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameGetFunction]]
+
+  LeaderboardGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/leaderboard_get/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          SCOREBOARD_TABLE_NAME: !Sub "${HighScoreTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${HighScoreTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /games/{gameId}/scoreboard
+            Auth: 
+              Authorizer: HTTPAuthorizer
+        HttpApiEventwPlayer:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /games/{gameId}/scoreboard/{playerId}
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  LeaderboardGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref LeaderboardGetFunction]]
+
+  QuestionPutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/question_put/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          QUESTIONS_TABLE_NAME: !Sub "${GamesDetailTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${GamesDetailTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent: 
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /games/{gameId}/questions/{questionNumber}
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  QuestionPutFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref QuestionPutFunction]]
+
+  GameHeaderPutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/gameheader_put/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE: !Sub "${PlayerInventoryTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${PlayerInventoryTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent: 
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /games
+            Auth:
+              Authorizer: HTTPAuthorizer
+  GameHeaderPutFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameHeaderPutFunction]]
+
+  GamePlayFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/game_play/
+      MemorySize: 1536
+      Layers:
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
+          QUESTIONS_TABLE_NAME: !Sub "${GamesDetailTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${ActiveGamesTable}"
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${GamesDetailTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /games/{gameId}/{playerId}
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  GamePlayFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GamePlayFunction]]
+
+  ActiveGamesListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/activegames_list/
+      MemorySize: 1536
+      Layers:
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${ActiveGamesTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent: 
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /activegames
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  ActiveGamesListFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref ActiveGamesListFunction]]
+
+  GameAnswerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      Timeout: 15
+      MemorySize: 1024
+      CodeUri: Functions/HTTP/game_answer/
+      Environment:
+        Variables:
+          QUESTIONS_TABLE_NAME: !Sub "${GamesDetailTable}"
+          PLAYER_PROGRESS_TOPIC: !Sub "${PlayerProgressTopicArn}" 
+          LEADERBOARD_TOPIC: !Sub "${LeaderboardTopicArn}"
+          RESPONSE_STREAM: !Sub "${QuizSourceStreamName}"
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !Sub "${PlayerProgressTopicName}"
+        - SNSPublishMessagePolicy:
+            TopicName: !Sub "${LeaderboardTopicName}"
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${GamesDetailTable}"
+        - KinesisCrudPolicy:
+            StreamName: !Sub "${QuizSourceStreamName}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /games/{gameId}/answer
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  GameAnswerFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameAnswerFunction]]
+
+  GameActivateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/HTTP/game_activate/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${ActiveGamesTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /activegames/{gameId}
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  GameActivateFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameActivateFunction]]
+
+  PlayerWalletAddFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/HTTP/playerwallet_add/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          PLAYER_WALLET_TOPIC: !Sub "${PlayerWalletTopicArn}"
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !Sub "${PlayerWalletTopicName}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /players/{playerId}/wallet
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  PlayerWalletAddFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerWalletAddFunction]]
+
+  PlayerWalletGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/HTTP/playerwallet_get/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          PLAYER_WALLET_TABLE_NAME: !Sub "${PlayerWalletTable}"
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${PlayerWalletTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /players/{playerId}/wallet
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  PlayerWalletGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerWalletGetFunction]]
+
+  GameListOnMarketPlaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/HTTP/game_listonmarketplace/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          MARKETPLACE_TABLE_NAME: !Sub "${MarketplaceTable}"
+          PLAYER_INVENTORY_TABLE_NAME: !Sub "${PlayerInventoryTable}"
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Sub "${MarketplaceTable}"
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${PlayerInventoryTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: PUT
+            Path: /players/{playerId}/games/{gameId}
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  GameListOnMarketPlaceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameListOnMarketPlaceFunction]]
+      
+  MarketplaceGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/marketplace_get/
+      MemorySize: 2048
+      Layers:
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          MARKETPLACE_TABLE_NAME: !Sub "${MarketplaceTable}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${MarketplaceTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        HttpApiEvent: 
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /marketplace
+            Auth: 
+              Authorizer: HTTPAuthorizer
+  MarketplaceGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref MarketplaceGetFunction]]
+
+  WritePurchasedToKinesisFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/HTTP/purchasedgame_putkinesis/
+      MemorySize: 2560
+      Environment:
+        Variables:
+          REGION: !Sub "${AWS::Region}"
+          PURCHASE_STREAM: !Sub "${PurchaseSourceStreamName}"
+      Policies:
+        - KinesisCrudPolicy:
+            StreamName: !Sub "${PurchaseSourceStreamName}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+  WritePurchasedToKinesisFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref WritePurchasedToKinesisFunction]]
+
+  PurchaseGameStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: game_purchase_statemachine/game_purchase.asl.json
+      DefinitionSubstitutions:
+        PlayerWalletTable: !Sub "${PlayerWalletTable}"
+        PlayerInventoryTable: !Sub "${PlayerInventoryTable}"
+        MarketplaceTable: !Sub "${MarketplaceTable}"
+        PlayerWalletTopicArn: !Sub "${PlayerWalletTopicArn}"
+        WritePurchasedToKinesisFunction: !Ref WritePurchasedToKinesisFunction
+        TransformFunction: !Ref GamePurchaseTransformFunction
+      Type: EXPRESS
+      Tracing:
+        Enabled: True
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+             LogGroupArn: !GetAtt MarketplacePurchaseLogGroup.Arn
+        IncludeExecutionData: true
+        Level: ALL
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Sub "${PlayerWalletTable}"
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${PlayerInventoryTable}"
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${MarketplaceTable}"
+        - SNSPublishMessagePolicy:
+            TopicName: !Sub "${PlayerWalletTopicName}"
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GamePurchaseTransformFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref WritePurchasedToKinesisFunction
+        - CloudWatchLogsFullAccess
+
+  MarketplacePurchaseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Sub "/qwizardly/statemachines/purchasegame-${AWS::StackName}"
+
+  GamePurchaseTransformFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/HTTP/game_purchase_transform/
+      Environment:
+        Variables:
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+  GamePurchaseTransformLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GamePurchaseTransformFunction]]
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      DefinitionBody:
+        openapi: "3.0.1"
+        info:
+          title: !Sub "HTTP-${AWS::StackName}" 
+          version: "2020-11-06 15:32:29UTC"
+        paths:
+          "/marketplace":
+            post:
+              responses:
+                default:
+                  description: "Default response for POST /"
+              x-amazon-apigateway-integration:
+                integrationSubtype: "StepFunctions-StartSyncExecution"
+                requestParameters:
+                  Input: "$request.body"
+                  StateMachineArn: 
+                    Fn::GetAtt: [PurchaseGameStateMachine, Arn] 
+                payloadFormatVersion: "1.0"
+                type: "aws_proxy"
+                connectionType: "INTERNET"
+        x-amazon-apigateway-cors:
+          allowMethods:
+          - "*"
+          maxAge: 600
+          allowCredentials: true
+          allowOrigins:
+          - "http://*" 
+          - "https://*"
+          allowHeaders:
+          - "*"
+        x-amazon-apigateway-importexport-version: "1.0"
+      Auth: 
+        Authorizers:
+          HTTPAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolID}"
+              audience:
+                - !Sub "${AppClientID}"
+            IdentitySource: "$request.header.Authorization"
+        DefaultAuthorizer: HTTPAuthorizer
+
+  HttpApiRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Ref HTTPManagedPolicy
+        
+  HTTPManagedPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-HTTPManagedPolicyforStepFunctions" ] ]      
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: "states:StartSyncExecution"
+            Resource: !GetAtt PurchaseGameStateMachine.Arn
+
+  AvatarBucket:
+    Type: AWS::S3::Bucket
+
+#Included here due to limitation of SAM requiring functions to be in the same template
+  AttachPolicyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: MMLive
+      CodeUri: Functions/HTTP/permissions_add/
+      Environment:
+        Variables:
+          ATTACH_POLICY: !Ref IoTFullPolicy
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - !Ref IoTAttachPoliciesPolicy
+      Events:
+        HttpApiEvent: 
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /playerpermission
+            Auth: 
+              Authorizer: HTTPAuthorizer
+
+  IoTAttachPoliciesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join ["", [!Ref "AWS::StackName", "-IoTAttachPoliciesPolicy"]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AddPermissionsPolicy
+            Effect: Allow
+            Action:
+            - iot:AttachPrincipalPolicy
+            - iot:DetachPrincipalPolicy
+            Resource: "*"
+      
+  AttachPolicyLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref AttachPolicyFunction]]
+  
+  IoTFullPolicy:
+    Type: "AWS::IoT::Policy"
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: "iot:Connect"
+            Resource: '*'
+          - Effect: "Allow"
+            Action: "iot:Publish"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/*"]]
+          - Effect: "Allow"
+            Action: "iot:Subscribe"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topicfilter/*"]]
+          - Effect: "Allow"
+            Action: "iot:Receive"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/*"]]
+
+Outputs:
+  HTTPAPIGWId:
+    Description: "ID of the HTTP API"
+    Value: !Ref HttpApi
+    Export:
+      Name: !Sub "${AWS::StackName}-HTTPAPIGWID"
+
+  HTTPApiGWURI:
+    Description: "URI for the HTTP API"
+    Value: !GetAtt HttpApi.ApiEndpoint 

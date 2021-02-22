@@ -1,0 +1,11 @@
+{
+  "name": "game_activate",
+  "version": "1.0.0",
+  "description": "Host a game for Qwizardly on API Gateway",
+  "main": "src/app.js",
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

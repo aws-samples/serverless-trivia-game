@@ -1,0 +1,130 @@
+/*
+  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this
+  software and associated documentation files (the "Software"), to deal in the Software
+  without restriction, including without limitation the rights to use, copy, modify,
+  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+  PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+<template>
+    <div>
+        <span>
+            <v-toolbar color="primary" class="headline black--text">
+                <v-toolbar-title>Select a game to purchase</v-toolbar-title>
+                <v-spacer></v-spacer>
+            </v-toolbar>            
+            <v-card>
+                <v-card-title>Game Listing<v-spacer></v-spacer>
+                    <v-text-field
+                        v-model="search"
+                        append-icon="mdi-magnify"
+                        label="Search"
+                        single-line
+                        hide-details
+                    ></v-text-field>
+                </v-card-title>
+                <v-row align="center" justify="center">
+                    <v-data-table
+                        :headers="gameheaders"
+                        :items="marketplaceListings"
+                        item-key="gameId"
+                        dense
+                        sort-by="quizName"
+                        no-data-text="No games for sale right now"
+                        :search="search"
+                        >
+                        <template v-slot:item="props">
+                            <tr>
+                                <td><input type="radio" :value="props.item.gameId" v-model="pickedGameId"></td>
+                                <td>{{props.item.quizName}}</td>
+                                <td>{{props.item.quizDescription}}</td>
+                                <td>{{props.item.quizMode}}</td>
+                                <td>{{props.item.questionType}}</td>
+                                <td>{{props.item.playerName}}</td>
+                                <td>{{props.item.amount}}</td>
+                            </tr>
+                        </template>
+                    </v-data-table>
+                </v-row>
+            </v-card>
+            <v-row class="mb-1">
+                <v-btn x-large block color="accent" class="white--text" v-on:click="purchaseGame">Purchase Game</v-btn>
+            </v-row>
+            <v-row class="mb-1">
+                <v-btn x-large block color="accent" class="white--text" v-on:click="closeList">Home</v-btn>
+            </v-row>
+        </span>
+    </div>
+</template>
+
+<script>
+import DataService from '@/services/DataServices';
+
+export default {
+    name: 'Marketplace',
+    props: {
+        marketplaceListings: Array
+    },
+    data: function() { return {
+        quizName: '',
+        quizCode: '',
+        gameheaders: [ {text: '', align:'left', sortable:'false', value:'selected'},
+                    { text: 'Quiz Name', align:'left', sortable:'false', value:'quizName'},
+                    { text: 'Description', value: 'quizDescription'},
+                    { text: 'Quiz Mode', value: 'quizMode'},
+                    { text: 'Question Type', value: 'questionType'},
+                    { text: 'Seller', value: 'playerName'},
+                    { text: 'Sale Amount', value: 'amount'}],
+        question: 0,
+        gameid:'',
+        search:'',
+        pickedGameId:''
+    }},
+    methods: {
+        async purchaseGame() {
+            let sellerPlayerId;
+            if(this.pickedGameId!='') {
+                this.marketplaceListings.forEach(game =>
+                {
+                    if(game.gameId===this.pickedGameId)
+                    {
+                        sellerPlayerId = game.playerName;
+                    }
+                });
+                let results = await DataService.purchaseGame({gameId: this.pickedGameId, playerId: this.username,
+                    sellerPlayerId, jwt: this.myjwt});
+                let output = JSON.parse(results.data.output)
+                switch(output.statusCode){
+                    case 500:
+                        alert(output.body.message);
+                        break;
+                    case 200:
+                        alert('Game purchased');
+                        break;
+                }
+            } else {
+                alert('Please select a game first');
+            }
+        },
+        closeList() {
+            this.$store.commit('setHostGameMode', 'getlist');
+            this.$store.commit('setUIMode', 'home');
+        },
+    },
+    computed: {
+        adminmode: function() {return this.$store.state.adminmode},
+        gamelist: function() {return this.$store.state.admin.gamelist;},
+        username: function() {return this.$store.state.user.username;},
+        gethostbutton: function() {if(this.question==0){return "Start Quiz";} else {return "Next Question";}},
+        game: function() {return this.$store.state.admin.game;},
+        myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken }
+    }
+}
+</script>

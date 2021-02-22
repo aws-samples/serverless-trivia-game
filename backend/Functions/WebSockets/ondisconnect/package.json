@@ -1,0 +1,11 @@
+{
+  "name": "on-disconnect",
+  "version": "1.0.0",
+  "description": "on disconnect for Qwizardly on API Gateway",
+  "main": "ondisconnect/app.js",
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

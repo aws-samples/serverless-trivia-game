@@ -1,0 +1,11 @@
+{
+  "name": "question_put",
+  "version": "1.0.0",
+  "description": "Save question for Qwizardly on API Gateway",
+  "main": "question_put/app.js",
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

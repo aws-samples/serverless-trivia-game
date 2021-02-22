@@ -1,0 +1,11 @@
+{
+  "name": "livegameplayer",
+  "version": "1.0.0",
+  "description": "Live Game Player for Qwizardly on API Gateway",
+  "main": "livegameplayer/app.js",
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

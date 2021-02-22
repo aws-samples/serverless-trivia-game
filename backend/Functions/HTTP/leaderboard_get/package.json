@@ -1,0 +1,11 @@
+{
+  "name": "scoreboard_get",
+  "version": "1.0.0",
+  "description": "Get Scoreboard for Qwizardly on API Gateway",
+  "main": "scoreboard_get/app.js",
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

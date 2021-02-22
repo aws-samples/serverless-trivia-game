@@ -1,0 +1,15 @@
+{
+  "name": "answer_receive",
+  "version": "1.0.0",
+  "description": "receive answer from a player",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0",
+    "redis": "^3.0.2"
+  }
+}

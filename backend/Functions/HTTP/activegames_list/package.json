@@ -1,0 +1,12 @@
+{
+  "name": "activegames_list",
+  "version": "1.0.0",
+  "description": "Get list of active games for Qwizardly on API Gateway",
+  "main": "activegames_list/app.js",
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-embedded-metrics": "^2.0.1",
+    "aws-sdk": "^2.771.0"
+  }
+}

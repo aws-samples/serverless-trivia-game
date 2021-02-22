@@ -1,0 +1,11 @@
+{
+  "name": "game_get",
+  "version": "1.0.0",
+  "description": "Get a game for Qwizardly on API Gateway",
+  "main": "game_get/app.js",
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

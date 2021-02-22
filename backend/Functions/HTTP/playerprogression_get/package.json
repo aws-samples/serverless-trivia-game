@@ -1,0 +1,14 @@
+{
+  "name": "playerprogression_get",
+  "version": "1.0.0",
+  "description": "Qwizardly Get Player Progression function",
+  "main": "playerprogression_get/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

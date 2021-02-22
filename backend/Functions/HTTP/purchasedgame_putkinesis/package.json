@@ -1,0 +1,14 @@
+{
+  "name": "purchasedgame_putkinesis",
+  "version": "1.0.0",
+  "description": "write purchased game records to kinesis",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tim Bruce",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

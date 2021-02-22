@@ -1,0 +1,12 @@
+{
+  "name": "game_play",
+  "version": "1.0.0",
+  "description": "Play game for Qwizardly on API Gateway",
+  "main": "game_play/app.js",
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-embedded-metrics": "^2.0.1",
+    "aws-sdk": "^2.771.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "authorzier",
+  "version": "1.0.0",
+  "description": "Auth for Qwizardly on API Gateway",
+  "main": "auth/app.js",
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "jsonwebtoken": "8.5.1",
+    "jwk-to-pem": "2.0.4",
+    "request": "2.88.2"
+  }
+}

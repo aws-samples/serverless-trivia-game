@@ -1,0 +1,372 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Full Game Set
+
+Globals:
+  Function:
+    Runtime: nodejs12.x
+    Handler: app.handler
+    MemorySize: 512 
+    Timeout: 10
+    Tracing: Active
+    Environment:
+      Variables:
+        AWS_EMF_NAMESPACE: !Sub "${EMFNamespace}"
+    Layers:
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:12"
+
+    
+Parameters:
+  IoTEndpoint:
+    Type: String
+    Description: IoTEndpoin for WS over MQTT
+  LogRetentionDays:
+    Type: Number
+    Description: Days to retain CloudWatch Logs for the Lambda Functions
+    Default: 30
+  ResourceGroupPrefix:
+    Type: String
+    Description: Name of the Resource Group prefix
+    Default: 'GameService'
+  EMFNamespace:
+    Type: String
+    Description: Name of the EMF Namespace
+    Default: 'STS'
+  S3BufferInterval:
+    Description: Number of seconds to buffer data before delivering to S3 (60 to 900).
+    Type: Number
+    Default: 60
+    MinValue: 60
+    MaxValue: 900
+  S3BufferSize:
+    Description: Number of MB of data to buffer before delivering to S3 (1 to 128).
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 128
+  SourceStreamSize:
+    Description: Kinesis Stream Size
+    Type: String
+    AllowedPattern: '[0-9]*'
+    Default: '1'
+    
+Resources:
+  ResourceGroup:
+    Type: "AWS::ResourceGroups::Group"
+    Properties:
+      Name: !Join ["-", [!Sub "${ResourceGroupPrefix}", "Main"]]
+  UtilsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'utilslayer--${AWS::StackName}'
+      Description: Utils layer to be used by different lambda functions
+      ContentUri: dependencies/utilslayer/nodejs/utilslayer.zip
+      RetentionPolicy: Delete
+      CompatibleRuntimes:
+        - nodejs12.x
+
+  DT:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./dynamodbtemplate.yaml
+      Parameters:
+        ResourceGroupName: !Join ["-", [!Sub "${ResourceGroupPrefix}", "DynamoDB"]] 
+
+  WS:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./websocketstemplate.yaml
+      Parameters:
+        ConnectionsTable: !GetAtt DT.Outputs.ConnectionsTable
+        GamePlayersTable: !GetAtt DT.Outputs.GamePlayersTable
+        ActiveGamesTable: !GetAtt DT.Outputs.ActiveGamesTable
+        PlayerInventoryTable: !GetAtt DT.Outputs.PlayerInventoryTable
+        PlayerWalletTable: !GetAtt DT.Outputs.PlayerWalletTable
+        HighScoreTable: !GetAtt DT.Outputs.HighScoreTable
+        GamesDetailTable: !GetAtt DT.Outputs.GamesDetailTable
+        PlayerProgressTopicName: !GetAtt PlayerProgressTopic.TopicName
+        PlayerProgressTopicArn: !Ref PlayerProgressTopic
+        UserPoolID: !Ref UserPool
+        LogRetentionDays: !Sub "${LogRetentionDays}"
+        ResourceGroupName: !Join ["-", [!Sub "${ResourceGroupPrefix}", "WebSockets"]]
+        EMFNamespace: !Sub "${EMFNamespace}"
+        UtilsLayer: !Ref UtilsLayer
+        QuizSourceStreamName: !GetAtt Analytics.Outputs.QuizSourceStreamName
+
+  HTTP:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./httptemplate.yaml
+      Parameters:
+        ActiveGamesTable: !GetAtt DT.Outputs.ActiveGamesTable
+        PlayerInventoryTable: !GetAtt DT.Outputs.PlayerInventoryTable
+        PlayerWalletTable: !GetAtt DT.Outputs.PlayerWalletTable
+        HighScoreTable: !GetAtt DT.Outputs.HighScoreTable
+        GamesDetailTable: !GetAtt DT.Outputs.GamesDetailTable
+        MarketplaceTable: !GetAtt DT.Outputs.MarketplaceTable
+        PlayerTable: !GetAtt DT.Outputs.PlayerTable
+        PlayerProgressTable: !GetAtt DT.Outputs.PlayerProgressTable
+        PlayerProgressTopicName: !GetAtt PlayerProgressTopic.TopicName
+        PlayerProgressTopicArn: !Ref PlayerProgressTopic
+        PlayerWalletTopicName: !GetAtt PlayerWalletTopic.TopicName
+        PlayerWalletTopicArn: !Ref PlayerWalletTopic
+        UserPoolID: !Ref UserPool
+        AppClientID: !Ref UserPoolClient
+        LeaderboardTopicName: !GetAtt LeaderboardTopic.TopicName
+        LeaderboardTopicArn: !Ref LeaderboardTopic
+        LogRetentionDays: !Sub "${LogRetentionDays}"
+        ResourceGroupName: !Join ["-", [!Sub "${ResourceGroupPrefix}", "HTTP"]]
+        EMFNamespace: !Sub "${EMFNamespace}"
+        UtilsLayer: !Ref UtilsLayer
+        PurchaseSourceStreamName: !GetAtt Analytics.Outputs.PurchaseSourceStreamName
+        QuizSourceStreamName: !GetAtt Analytics.Outputs.QuizSourceStreamName
+
+  IOT:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./iot.yaml
+      Parameters:
+        PlayerInventoryTable: !GetAtt DT.Outputs.PlayerInventoryTable
+        GamesDetailTable: !GetAtt DT.Outputs.GamesDetailTable
+        ActiveGamesTable: !GetAtt DT.Outputs.ActiveGamesTable
+        HighScoreTable: !GetAtt DT.Outputs.HighScoreTable
+        PlayerProgressTopicName: !GetAtt PlayerProgressTopic.TopicName
+        PlayerProgressTopicArn: !Ref PlayerProgressTopic
+        EMFNamespace: !Sub "${EMFNamespace}"
+        LogRetentionDays: !Sub "${LogRetentionDays}"
+        QuizSourceStreamName: !GetAtt Analytics.Outputs.QuizSourceStreamName
+        IoTEndpoint: !Sub "${IoTEndpoint}"
+        
+  Analytics:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./analytics.yaml
+      Parameters:
+        ResourceGroupName: !Join ["-", [!Sub "${ResourceGroupPrefix}", "Analytics"]]
+        ServicePrefix: !Sub "${AWS::StackName}"
+        S3BufferInterval: !Ref S3BufferInterval
+        S3BufferSize: !Ref S3BufferSize
+        SourceStreamSize: !Ref SourceStreamSize
+
+  PlayerProgressPutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/Main/playerprogression_put/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_PROGRESS_TABLE_NAME: !GetAtt DT.Outputs.PlayerProgressTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !GetAtt DT.Outputs.PlayerProgressTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        SNSSendMessageEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref PlayerProgressTopic
+            
+  PlayerProgressPutFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerProgressPutFunction]]
+
+  ScorePutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      MemorySize: 1536
+      CodeUri: Functions/Main/score_put/
+      Environment:
+        Variables:
+          SCORES_TABLE_NAME: !GetAtt DT.Outputs.HighScoreTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !GetAtt DT.Outputs.HighScoreTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        SNSSendMessageEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref LeaderboardTopic
+
+  ScorePutFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref ScorePutFunction]]
+
+  MoneyAdjustFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/Main/money_adjust/
+      MemorySize: 2048
+      Environment:
+        Variables:
+          PLAYER_WALLET_TABLE_NAME: !GetAtt DT.Outputs.PlayerWalletTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !GetAtt DT.Outputs.PlayerWalletTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        SNSSendMessageEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref PlayerWalletTopic
+
+  MoneyAdjustFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref MoneyAdjustFunction]]
+
+  PlayerProgressTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: PlayerProgressTopic
+
+  LeaderboardTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: LeaderboardTopic
+
+  PlayerWalletTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: WalletTopic
+
+  PreSignUpTrigger:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      Timeout: 5
+      CodeUri: Functions/Main/cognito_presignup/
+
+  UserPoolLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      Principal: cognito-idp.amazonaws.com
+      FunctionName: !Ref PreSignUpTrigger
+      SourceArn: !GetAtt UserPool.Arn
+      
+  UserPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      MfaConfiguration: "OFF"
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+      LambdaConfig:
+        PreSignUp: !GetAtt PreSignUpTrigger.Arn
+  
+  UserPoolClient:
+    Type: "AWS::Cognito::UserPoolClient"
+    Properties:
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+
+  IdentityPool:
+    Type: "AWS::Cognito::IdentityPool"
+    Properties:
+      AllowUnauthenticatedIdentities: true
+      CognitoIdentityProviders: 
+        - ClientId: !Ref UserPoolClient
+          ProviderName: !GetAtt UserPool.ProviderName
+
+  CognitoUnAuthorizedRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: 
+              Federated: "cognito-identity.amazonaws.com"
+            Action: 
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals: 
+                "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": unauthenticated
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSIoTDataAccess
+        - !Ref CognitoUserPolicy
+        
+  CognitoAuthorizedRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: 
+              Federated: "cognito-identity.amazonaws.com"
+            Action: 
+              - "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals: 
+                "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+              "ForAnyValue:StringLike":
+                "cognito-identity.amazonaws.com:amr": authenticated
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSIoTDataAccess
+        - !Ref CognitoUserPolicy
+
+  CognitoUserPolicy:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-CognitoUserPolicy"] ]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Action:
+              - "cognito-sync:*"
+            Resource: !Join [ "", [ "arn:aws:cognito-sync:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":identitypool/", !Ref IdentityPool] ]
+
+  IdentityPoolRoleMapping:
+    Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+    Properties:
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+        authenticated: !GetAtt CognitoAuthorizedRole.Arn
+        unauthenticated: !GetAtt CognitoUnAuthorizedRole.Arn
+        
+Outputs:
+  httpapi:
+    Description: "ID of the HTTP API for STS"
+    Value: !GetAtt HTTP.Outputs.HTTPApiGWURI
+
+  wsapi:
+    Description: "ID of the WebSocket API for STS"
+    Value: !GetAtt WS.Outputs.WebSocketURI
+
+  identitypoolid:
+    Description: "ID of the Identity Pool for STS"
+    Value: !Ref IdentityPool
+    
+  userpoolid:
+    Description: "ID of the UserPool for STS"
+    Value: !Ref UserPool
+  
+  appclientid:
+    Description: "ID of the AppClient for STS"
+    Value: !Ref UserPoolClient
