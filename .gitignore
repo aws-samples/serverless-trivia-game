@@ -1,0 +1,3 @@
+backend/.aws-sam
+backend/dependencies/
+node_modules/
