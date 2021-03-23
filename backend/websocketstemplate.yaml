@@ -14,7 +14,7 @@ Globals:
       Variables:
         AWS_EMF_NAMESPACE: !Sub "${EMFNamespace}"
     Layers:
-      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:12"
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
 
 Parameters:
   ConnectionsTable:
@@ -56,9 +56,6 @@ Parameters:
   EMFNamespace:
     Type: String
     Description: Name of the EMF Namespace
-  UtilsLayer:
-    Type: String
-    Description: Utils layer  
   QuizSourceStreamName:
     Type: String
     Description: Stream for results

@@ -14,7 +14,7 @@ Globals:
       Variables:
         AWS_EMF_NAMESPACE: !Sub "${EMFNamespace}"
     Layers:
-      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:12"
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
 
 Parameters:
   ActiveGamesTable:
@@ -74,9 +74,6 @@ Parameters:
   EMFNamespace:
     Type: String
     Description: Name of the EMF Namespace  
-  UtilsLayer:
-    Type: String
-    Description: Utils layer
   PurchaseSourceStreamName:
     Type: String
     Description: Stream for purchases
@@ -89,6 +86,19 @@ Resources:
     Type: "AWS::ResourceGroups::Group"
     Properties:
       Name: !Sub "${ResourceGroupName}"
+
+#Moved to HTTP Template due to SAM 1.21.1 tightening of rules for deploying nested applications with layers
+  UtilsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'utilslayer--${AWS::StackName}'
+      Description: Utils layer to be used by different lambda functions
+      ContentUri: dependencies/utilslayer/nodejs/utilslayer.zip
+      CompatibleRuntimes:
+        - nodejs12.x
+      LicenseInfo: 'MIT'
+      RetentionPolicy: Retain
+
   MyGamesListFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -646,7 +656,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
-      LogGroupName: !Sub "/qwizardly/statemachines/purchasegame-${AWS::StackName}"
+      LogGroupName: !Sub "/sts/statemachines/purchasegame-${AWS::StackName}"
 
   GamePurchaseTransformFunction:
     Type: AWS::Serverless::Function

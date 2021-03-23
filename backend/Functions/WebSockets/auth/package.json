@@ -6,6 +6,7 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
+    "elliptic": "^6.5.4",
     "jsonwebtoken": "8.5.1",
     "jwk-to-pem": "2.0.4",
     "request": "2.88.2"

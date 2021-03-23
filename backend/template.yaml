@@ -14,7 +14,7 @@ Globals:
       Variables:
         AWS_EMF_NAMESPACE: !Sub "${EMFNamespace}"
     Layers:
-      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:12"
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
 
     
 Parameters:
@@ -56,15 +56,6 @@ Resources:
     Type: "AWS::ResourceGroups::Group"
     Properties:
       Name: !Join ["-", [!Sub "${ResourceGroupPrefix}", "Main"]]
-  UtilsLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      LayerName: !Sub 'utilslayer--${AWS::StackName}'
-      Description: Utils layer to be used by different lambda functions
-      ContentUri: dependencies/utilslayer/nodejs/utilslayer.zip
-      RetentionPolicy: Delete
-      CompatibleRuntimes:
-        - nodejs12.x
 
   DT:
     Type: AWS::Serverless::Application
@@ -91,7 +82,6 @@ Resources:
         LogRetentionDays: !Sub "${LogRetentionDays}"
         ResourceGroupName: !Join ["-", [!Sub "${ResourceGroupPrefix}", "WebSockets"]]
         EMFNamespace: !Sub "${EMFNamespace}"
-        UtilsLayer: !Ref UtilsLayer
         QuizSourceStreamName: !GetAtt Analytics.Outputs.QuizSourceStreamName
 
   HTTP:
@@ -118,7 +108,6 @@ Resources:
         LogRetentionDays: !Sub "${LogRetentionDays}"
         ResourceGroupName: !Join ["-", [!Sub "${ResourceGroupPrefix}", "HTTP"]]
         EMFNamespace: !Sub "${EMFNamespace}"
-        UtilsLayer: !Ref UtilsLayer
         PurchaseSourceStreamName: !GetAtt Analytics.Outputs.PurchaseSourceStreamName
         QuizSourceStreamName: !GetAtt Analytics.Outputs.QuizSourceStreamName
 
