@@ -1,8 +1,8 @@
 # Simple Trivia Service - a Serverless Single- and Multi-player Trivia Game 
 
-This example application shows how to build both single and multiplayer games using Serverless architectures and managed services from AWS.  Information about how this project works and how serverless architectures perform was published on the blog (Building a serverless multi-player game that scales)[https://aws.amazon.com/blogs/compute/building-a-serverless-multiplayer-game-that-scales/].
+This example application shows how to build both single and multiplayer games using Serverless architectures and managed services from AWS.  Information about how this project works and how serverless architectures perform was published on the blog [Building a serverless multi-player game that scales](https://aws.amazon.com/blogs/compute/building-a-serverless-multiplayer-game-that-scales/).
 
-Important: this application uses various AWS services and there are costs associated with these services after the Free Tier usage - please see the (AWS Pricing page)[https://aws.amazon.com/pricing/] for details. You are responsible for any AWS costs incurred. No warranty is implied in this example.
+Important: this application uses various AWS services and there are costs associated with these services after the Free Tier usage - please see the [AWS Pricing page](https://aws.amazon.com/pricing/) for details. You are responsible for any AWS costs incurred. No warranty is implied in this example.
 
 ## Project Organization
 
