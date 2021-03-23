@@ -38,7 +38,7 @@ This set of steps will deploy a number of AWS resources to your account, includi
 4. Navigate to the serverless-trivia-game directory and run the command `./prebuild.sh`.  This script will build 2 layers, which are required for the project, as well as installing Node.JS dependencies.  When the script is finished, you should be in the directory serverless-trivia-game.
 5. Navigate to the serverless-trivia-game/backend directory.
 6. Run the command `sam build` to package the application.
-7. Run the command `sam deploy --guided` to start the deployment of the application.  The foltarlowing options are presented during this step:
+7. Run the command `sam deploy --guided` to start the deployment of the application.  The following options are presented during this step:
 ```
     Stack name: sts
     Region: <your selected region>
