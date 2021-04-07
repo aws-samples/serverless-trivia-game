@@ -63,11 +63,11 @@ export default {
     },
     methods: {
         handlechat: function() {
-            let chatmessage = { userName: this.username, channel: this.currentTab.toLowerCase().replace(/\s/g, ''),
-                message: this.chat, subaction: 'chat'};
-            let message = {message: 'liveplayer', data: chatmessage};
-            this.chat = '';
-            this.$emit("send-message", JSON.stringify(message));
+            if(this.currentTab.toLowerCase().replace(/\s/g,'')) {
+                let message = { message: `${this.username} says, "${this.chat}"` };
+                this.chat = '';
+                this.$emit("send-iot-message", "chat/globalchat", JSON.stringify(message));
+            }
         }
     }
 }
