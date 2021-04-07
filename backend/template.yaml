@@ -83,6 +83,8 @@ Resources:
         ResourceGroupName: !Join ["-", [!Sub "${ResourceGroupPrefix}", "WebSockets"]]
         EMFNamespace: !Sub "${EMFNamespace}"
         QuizSourceStreamName: !GetAtt Analytics.Outputs.QuizSourceStreamName
+        ChatTopicName: !GetAtt SendChatTopic.TopicName
+        ChatTopicArn: !Ref SendChatTopic
 
   HTTP:
     Type: AWS::Serverless::Application
@@ -126,6 +128,8 @@ Resources:
         LogRetentionDays: !Sub "${LogRetentionDays}"
         QuizSourceStreamName: !GetAtt Analytics.Outputs.QuizSourceStreamName
         IoTEndpoint: !Sub "${IoTEndpoint}"
+        ChatTopicName: !GetAtt SendChatTopic.TopicName
+        ChatTopicArn: !Ref SendChatTopic
         
   Analytics:
     Type: AWS::Serverless::Application
@@ -216,6 +220,42 @@ Resources:
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref MoneyAdjustFunction]]
 
+  SendChatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: Functions/Main/chat_send/
+      MemorySize: 2048
+      Environment:
+        Variables:
+          IOT_ENDPOINT: !Sub "${IoTEndpoint}"
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - !Ref SendChatPolicy
+      Events:
+        SNSSendChatEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref SendChatTopic
+
+  SendChatFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref SendChatFunction]]
+
+  SendChatPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-IoTSendChatPolicy" ] ]      
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: "Allow"
+            Action: "iot:Publish"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/chat/*"]]
+
   PlayerProgressTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -225,6 +265,11 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: LeaderboardTopic
+      
+  SendChatTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: SendChatTopic
 
   PlayerWalletTopic:
     Type: AWS::SNS::Topic

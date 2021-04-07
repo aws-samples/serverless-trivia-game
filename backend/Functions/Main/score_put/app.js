@@ -61,7 +61,6 @@ exports.handler = async (event) => {
   let message = {};
   message = event.Records[0];
   const msg = JSON.parse(message.Sns.Message);
-  // TODO: track down all sendmessages to this to change for playerid
   const retVal = await updateScoreboard(msg.gameId, msg.quizName, msg.playerid,
     msg.score);
   return retVal;

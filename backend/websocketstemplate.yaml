@@ -59,6 +59,12 @@ Parameters:
   QuizSourceStreamName:
     Type: String
     Description: Stream for results
+  ChatTopicName:
+    Type: String
+    Description: Name for the SNS Chat Topic
+  ChatTopicArn:
+    Type: String
+    Description: Arn for the SNS Chat Topic
 
 Resources:
   ResourceGroup:
@@ -319,6 +325,7 @@ Resources:
           GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
           CONNECTIONS_TABLE_NAME: !Sub "${ConnectionsTable}"
           RESPONSE_STREAM: !Sub "${QuizSourceStreamName}"
+          CHAT_TOPIC_ARN: !Sub "${ChatTopicArn}"
           REGION: !Sub "${AWS::Region}"
       Policies:
         - KinesisCrudPolicy:
@@ -337,6 +344,8 @@ Resources:
             TableName: !Sub "${GamesDetailTable}"
         - DynamoDBReadPolicy:
             TableName: !Sub "${PlayerInventoryTable}"
+        - SNSPublishMessagePolicy:
+            TopicName: !Sub "${ChatTopicName}"
         - CloudWatchLambdaInsightsExecutionRolePolicy
         - !Ref WebSocketManageConnectionsPolicy
   LiveGameAdminFunctionLogGroup:

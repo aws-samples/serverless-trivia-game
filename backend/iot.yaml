@@ -31,6 +31,13 @@ Parameters:
   QuizSourceStreamName:
     Type: String
     Description: Stream for results
+  ChatTopicName:
+    Type: String
+    Description: Name for the SNS Chat Topic
+  ChatTopicArn:
+    Type: String
+    Description: Arn for the SNS Chat Topic
+  
   
 Globals:
   Function:
@@ -43,7 +50,7 @@ Globals:
       Variables:
         AWS_EMF_NAMESPACE: !Sub "${EMFNamespace}"
     Layers:
-      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:12"
+      - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
 
 Resources:
   VPC:
@@ -312,6 +319,7 @@ Resources:
           IOT_ENDPOINT: !Sub "${IoTEndpoint}"
           REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
           REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+          CHAT_TOPIC_ARN: !Sub "${ChatTopicArn}"
           REGION: !Sub "${AWS::Region}"
       VpcConfig:
         SecurityGroupIds:
@@ -324,6 +332,8 @@ Resources:
             TableName: !Sub "${ActiveGamesTable}"
         - DynamoDBReadPolicy:
             TableName: !Sub "${GamesDetailTable}"
+        - SNSPublishMessagePolicy:
+            TopicName: !Sub "${ChatTopicName}"
         - CloudWatchLambdaInsightsExecutionRolePolicy
         - !Ref CacheGamePolicy
       Events:

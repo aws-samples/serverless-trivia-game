@@ -40,6 +40,7 @@ const playerInventoryTableName = process.env.PLAYER_INVENTORY_TABLE_NAME;
 const playersTableName = process.env.PLAYERS_TABLE_NAME;
 const questionsTableName = process.env.GAMES_DETAIL_TABLE_NAME;
 const scoreStream = process.env.RESPONSE_STREAM;
+const chatTopicArn = process.env.CHAT_TOPIC_ARN;
 
 function dateString() {
   const date = new Date();
@@ -120,20 +121,22 @@ async function hostGame(gameInfo, connectionId, domainName, stage) {
     console.error(`Error getting game ${e}`);
     return { statusCode: 500, body: 'Looks like an invalid game' };
   }
-  const message = {};
+  let message = {};
   // user, channel, message
-  message.userName = gameInfo.playerName;
-  message.channel = gameInfo.channel;
-  message.action = 'chat';
-  message.message = `Hosting game :${gameInfo.quizName}`;
-  message.domainName = domainName;
-  message.stage = stage;
-  const val = WSSend.SendChat(message);
-  return val;
+  message.TopicArn = chatTopicArn;
+  message.Message = `${gameInfo.playerName} says "Hosting game: ${gameInfo.quizName}"`;
+  message.Subject = 'globalchat';
+  try {
+    await sns.publish(message).promise();
+    return { statusCode: 200, body: "successful" };
+  } catch (e) {
+    console.error(`error sending sns message ${JSON.stringify(e)}`);
+    return { statusCode: 500, body: "could not send sns messaage" };
+  }
+  
 }
 
 async function sendMessages(analytics) {
-  // TODO: Add to anayltics pipeline
   const Data = JSON.stringify({ playerName: analytics.playerName, gameId: analytics.gameId, 
     dateOfQuiz: dateString(), quizMode: analytics.quizMode, 
     questions: analytics.questions });

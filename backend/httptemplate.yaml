@@ -656,7 +656,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
-      LogGroupName: !Sub "/sts/statemachines/purchasegame-${AWS::StackName}"
+      LogGroupName: !Sub "/qwizardly/statemachines/purchasegame-${AWS::StackName}"
 
   GamePurchaseTransformFunction:
     Type: AWS::Serverless::Function
