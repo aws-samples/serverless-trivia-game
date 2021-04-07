@@ -128,7 +128,7 @@
                         <v-row><v-col cols="3"></v-col>
                         </v-row></v-col>
                     </v-container>
-                <ChatController v-if="getUIMode==='chat'" msg="send chat" v-on:send-message="sendmessage"/><br>
+                <ChatController v-if="getUIMode==='chat'" msg="send chat" v-on:send-iot-message="publishIoTMessage"/><br>
                 <GameController v-if="getUIMode==='play'" v-on:send-raw-message="sendmessage" v-on:send-iot-message="publishIoTMessage" v-on:subscribe-iot-topic="subscribeIoTTopic"/>
                 <Player v-if="getUIMode==='profile'"
                     :player-xp="playerxp" :player-level="playerlevel"
@@ -321,71 +321,84 @@ export default {
         
         handleIoTMessage(topic, msg) {
             const main = topic.split('/');
-            switch(main[2]) {
-                case 'questionlist':
-                    this.$store.commit('setLiveAdminQuestions', msg.questionList);
-                    this.$store.commit('setLiveAdminQuizName', msg.quizName);
-                    this.$store.commit('setLiveAdminGameId', msg.gameId);
-                    this.$store.commit('setLiveAdminGameType', msg.quizMode);
-                    this.$store.commit('setLiveAdminQuestionType', msg.questionType);
-                    if(Object.keys(msg).includes('currentQuestionNumber')) {
-                        this.$store.commit('setLiveAdminQuestionNumber', parseInt(msg.currentQuestionNumber, 10));
-                    } else {
-                        this.$store.commit('setLiveAdminQuestionNumber', 0);
-                    }
-                    this.$store.commit('setUIMode', 'admin');
-                    this.$store.commit('setLivePlayerMode', false);
-                    break;
-                case 'question':
-                    this.$store.commit('setBlitzQuestionWinner', '');
-                    this.$store.commit('setBlitzIndividualResult', '');
-                    if(this.blitzadmin) {
-                        this.$store.commit('setAdminLiveBlitzQuestion', msg);
-                        this.$store.commit('clearLiveBlitzPlayerResponses');
-                    } else {
-                        this.$store.commit('setLivePlayerUIMode', 'question');
-                        this.$store.commit('clearLiveBlitzPlayerResponses');
-                        this.$store.commit('setLivePlayerQuestion', msg);
-                        this.$store.commit('setLivePlayerResponded', 0);
-                    }
-                    break;
-                case 'scoreboard':
-                    this.$store.commit('setLiveScoreboard', msg);
-                    if(!this.blitzadmin){
-                        this.$store.commit('setLivePlayerUIMode', 'scoreboard');
-                    }
-                    break;
-                case 'answers':
-                    if(this.blitzadmin){
-                        this.$store.commit('setBlitzPlayerResults', msg.checked);
-                    } else {
-                        this.$store.commit('setBlitzIndividualResult', msg.checked)
+            if(main.length>2) {
+                switch(main[2]) {
+                    case 'questionlist':
+                        this.$store.commit('setLiveAdminQuestions', msg.questionList);
+                        this.$store.commit('setLiveAdminQuizName', msg.quizName);
+                        this.$store.commit('setLiveAdminGameId', msg.gameId);
+                        this.$store.commit('setLiveAdminGameType', msg.quizMode);
+                        this.$store.commit('setLiveAdminQuestionType', msg.questionType);
+                        if(Object.keys(msg).includes('currentQuestionNumber')) {
+                            this.$store.commit('setLiveAdminQuestionNumber', parseInt(msg.currentQuestionNumber, 10));
+                        } else {
+                            this.$store.commit('setLiveAdminQuestionNumber', 0);
+                        }
+                        this.$store.commit('setUIMode', 'admin');
+                        this.$store.commit('setLivePlayerMode', false);
+                        break;
+                    case 'question':
+                        this.$store.commit('setBlitzQuestionWinner', '');
+                        this.$store.commit('setBlitzIndividualResult', '');
+                        if(this.blitzadmin) {
+                            this.$store.commit('setAdminLiveBlitzQuestion', msg);
+                            this.$store.commit('clearLiveBlitzPlayerResponses');
+                        } else {
+                            this.$store.commit('setLivePlayerUIMode', 'question');
+                            this.$store.commit('clearLiveBlitzPlayerResponses');
+                            this.$store.commit('setLivePlayerQuestion', msg);
+                            this.$store.commit('setLivePlayerResponded', 0);
+                        }
+                        break;
+                    case 'scoreboard':
+                        this.$store.commit('setLiveScoreboard', msg);
+                        if(!this.blitzadmin){
+                            this.$store.commit('setLivePlayerUIMode', 'scoreboard');
+                        }
+                        break;
+                    case 'answers':
+                        if(this.blitzadmin){
+                            this.$store.commit('setBlitzPlayerResults', msg.checked);
+                        } else {
+                            this.$store.commit('setBlitzIndividualResult', msg.checked)
+                        } 
+                        break;
+                    case 'results':
+                        if(!this.blitzadmin){
+                            this.$store.commit('setBlitzIndividualResult', msg.checked)
+                        } 
+                        break;
+                    case 'joined':
+                        this.$store.commit('setBlitzPlayerCount');
+                        break;
+                    case 'gameover':
+                        this.$store.commit('setBlitzPlayerGameOver', true);
+                        this.$store.commit('setLivePlayerUIMode', 'gameover');
+                        break;
+                    case 'playercorrect':
+                        this.$store.commit('setBlitzQuestionWinner', msg.firstCorrectAnswer);
+                        break;
+                    case 'endthegame':
+                        this.resetBlitz();
+                        break;
+                    default:
+                        console.log(`unhandled ${topic} - ${JSON.stringify(msg)}`);
+                        console.log(main[2]);
+                        console.log(main[3]);
+                        break;
                     } 
-                    break;
-                case 'results':
-                    if(!this.blitzadmin){
-                        this.$store.commit('setBlitzIndividualResult', msg.checked)
-                    } 
-                    break;
-                case 'joined':
-                    this.$store.commit('setBlitzPlayerCount');
-                    break;
-                case 'gameover':
-                    this.$store.commit('setBlitzPlayerGameOver', true);
-                    this.$store.commit('setLivePlayerUIMode', 'gameover');
-                    break;
-                case 'playercorrect':
-                    this.$store.commit('setBlitzQuestionWinner', msg.firstCorrectAnswer);
-                    break;
-                case 'endthegame':
-                    this.resetBlitz();
-                    break;
-                default:
-                    console.log(`unhandled ${topic} - ${JSON.stringify(msg)}`);
-                    console.log(main[2]);
-                    console.log(main[3]);
-                    break;
-            }
+                } else {
+                    switch(main[1]) {
+                        case 'globalchat':
+                        console.log(msg.message);
+                        this.$store.commit('setGlobalChat', msg.message);
+                        break;
+                    default:
+                        console.log(`unhandled ${topic} - ${JSON.stringify(msg)}`);
+                        console.log(main[1])
+                        break;
+                    }
+                }
         },
 
         setIoTConnected(status) {
@@ -441,6 +454,7 @@ export default {
                     if(!await this.initIoTConnect(this.clientId)) {
                         console.error('error attaching to MQTT WS');
                     }
+                    this.subscribeIoTTopic("chat/globalchat")
                 }
             }
             

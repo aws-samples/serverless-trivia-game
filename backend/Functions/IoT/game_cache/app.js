@@ -20,17 +20,20 @@
 
 const AWS = require('aws-sdk');
 const redis = require('redis');
+const sns = new AWS.SNS();
 
 AWS.config.apiVersions = { dynamodb: '2012-08-10', iot: '2015-05-28' };
 AWS.config.update = ({ region: process.env.REGION });
 
 const ddb = new AWS.DynamoDB.DocumentClient();
 
+
 const activeGamesTable = process.env.ACTIVE_GAMES_TABLE_NAME;
 const gamesDetailTable = process.env.GAMES_DETAIL_TABLE_NAME;
 const redisEndpoint = process.env.REDIS_ENDPOINT;
 const redisPort = process.env.REDIS_PORT;
 const endpoint = process.env.IOT_ENDPOINT;
+const chatTopicArn = process.env.CHAT_TOPIC_ARN;
 
 const redisOptions = {
   host: redisEndpoint,
@@ -40,6 +43,22 @@ const redisOptions = {
 const redisClient = redis.createClient(redisOptions);
 
 const iotdata = new AWS.IotData({ endpoint });
+
+async function sendHostGameMessage(gameInfo) {
+  let message = {};
+  // user, channel, message
+  message.TopicArn = chatTopicArn;
+  message.Message = `${gameInfo.playerName} says "Hosting game: ${gameInfo.quizName}"`;
+  message.Subject = 'globalchat';
+  try {
+    await sns.publish(message).promise();
+    return { statusCode: 200, body: "successful" };
+  } catch (e) {
+    console.error(`error sending sns message ${JSON.stringify(e)}`);
+    return { statusCode: 500, body: "could not send sns messaage" };
+  }
+
+}
 
 async function addToActiveGames(Item) {
   const TableName = activeGamesTable;
@@ -60,7 +79,6 @@ async function cacheQuestions(gameDetails) {
   redisClient.set(`${key}:currentQuestion`, 0);
   redisClient.expire(`${key}:currentQuestion`, 3600);
   gameDetails.questionList.forEach((question) => {
-    console.log(`caching ${key}, question${question.questionNumber.toString()} - ${JSON.stringify(question)}`);
     redisClient.hset(key, `question${question.questionNumber.toString()}`, JSON.stringify(question));
   });
 }
@@ -74,7 +92,6 @@ async function getQuestionsFromDatabase(gameInfo) {
   };
   try {
     const questionList = await ddb.query(queryparms).promise();
-    console.log(JSON.stringify(questionList));
     const gameReturn = gameInfo;
     gameReturn.questionList = questionList.Items;
     await cacheQuestions(gameReturn);
@@ -170,6 +187,7 @@ async function handleProcess(gameInfo) {
   const questionNumber = await getQuestionNumber(gameInfo);
   gameDetails.currentQuestionNumber = questionNumber;
   await publishQuestionList(gameDetails);
+  await sendHostGameMessage(gameInfo);
   return { statusCode: 200, body: 'game set to be run' };
 }
 
