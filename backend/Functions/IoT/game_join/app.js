@@ -18,15 +18,15 @@
 
 /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
 
-const AWS = require('aws-sdk');
+//const AWS = require('aws-sdk');
 const redis = require('redis');
 
-AWS.config.apiVersions = { iot: '2015-05-28' };
-AWS.config.update = ({ region: process.env.REGION });
+//AWS.config.apiVersions = { iot: '2015-05-28' };
+//AWS.config.update = ({ region: process.env.REGION });
 
 const redisEndpoint = process.env.REDIS_ENDPOINT;
 const redisPort = process.env.REDIS_PORT;
-const endpoint = process.env.IOT_ENDPOINT;
+//const endpoint = process.env.IOT_ENDPOINT;
 
 const redisOptions = {
   host: redisEndpoint,
@@ -34,9 +34,9 @@ const redisOptions = {
 };
 
 const redisClient = redis.createClient(redisOptions);
-
+/*
 const iotdata = new AWS.IotData({ endpoint });
-
+*/
 async function addPlayerToLeaderboard(key, gameInfo) {
   const promise = new Promise((resolve, reject) => {
     const localkey = `${key}:scoreboard`;
@@ -51,7 +51,7 @@ async function addPlayerToLeaderboard(key, gameInfo) {
   });
   return promise;
 }
-
+/*
 async function sendIoTMessage(params) {
   try {
     await iotdata.publish(params).promise();
@@ -61,7 +61,8 @@ async function sendIoTMessage(params) {
     return false;
   }
 }
-
+*/
+/*
 async function sendNotification(key, gameInfo) {
   const payload = { playerJoined: gameInfo.respondingPlayerName };
   const params = {
@@ -71,11 +72,11 @@ async function sendNotification(key, gameInfo) {
   };
   await sendIoTMessage(params);
 }
-
+*/
 async function handleJoinedGame(gameInfo) {
   const key = `${gameInfo.gameId}:${gameInfo.playerName}`;
   await addPlayerToLeaderboard(key, gameInfo);
-  await sendNotification(key, gameInfo);
+  //await sendNotification(key, gameInfo);
   return { statusCode: 200, body: 'added' };
 }
 
