@@ -12,20 +12,21 @@
   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+// SPDX-License-Identifier: MIT-0
+// Function: playeravatar_delete:app.js
 
-import Vue from 'vue';
-import App from './App.vue';
-import store from './store';
-import vuetify from './plugins/vuetify';
-import VueMeta from 'vue-meta';
-import './registerServiceWorker';
+/* eslint no-console: ["error", { allow: ["warn", "error"] }] */
 
-Vue.use(VueMeta, {refreshOnceOnNavigation: true});
+const AWS = require('aws-sdk');
 
-Vue.config.productionTip = false
+const s3 = new AWS.S3();
 
-new Vue({
-  store,
-  vuetify,
-  render: h => h(App)
-}).$mount('#app')
+exports.handler = async (event) => {
+  try {
+    const ret = await s3.deleteObject({ Bucket: event.bucketName, Key: event.key }).promise();
+    return ret;
+  } catch (err) {
+    console.error(`error deleting avatar ${JSON.stringify(err.stack)}`);
+    throw err;
+  }
+};

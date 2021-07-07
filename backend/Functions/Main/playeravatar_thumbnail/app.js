@@ -12,20 +12,29 @@
   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+// SPDX-License-Identifier: MIT-0
+// Function: playeravatar_thumbnail:app.js
 
-import Vue from 'vue';
-import App from './App.vue';
-import store from './store';
-import vuetify from './plugins/vuetify';
-import VueMeta from 'vue-meta';
-import './registerServiceWorker';
+/* eslint no-console: ["error", { allow: ["warn", "error"] }] */
+const AWS = require('aws-sdk');
 
-Vue.use(VueMeta, {refreshOnceOnNavigation: true});
+const sharp = require('sharp');
 
-Vue.config.productionTip = false
+const s3 = new AWS.S3();
 
-new Vue({
-  store,
-  vuetify,
-  render: h => h(App)
-}).$mount('#app')
+exports.handler = async (event) => {
+  try {
+    const image = await s3.getObject({ Bucket: event.bucketName, Key: event.key }).promise();
+    const resizedImg = await sharp(image.Body).resize(100, 100, { fit: 'cover' }).toFormat('jpeg').toBuffer();
+    const path = event.key.substring(0, event.key.lastIndexOf('/'));
+    const thumbnailKey = `${path}/thumb.jpg`;
+    await s3.putObject({ Bucket: event.bucketName, Body: resizedImg, Key: thumbnailKey }).promise();
+    return {
+      status: 200,
+      key: thumbnailKey,
+    };
+  } catch (err) {
+    console.error(`error creating thumbnail ${JSON.stringify(err.stack)}`);
+    throw err;
+  }
+};

@@ -23,41 +23,100 @@ AWS.config.update = ({ region: process.env.REGION });
 
 const ddb = new AWS.DynamoDB.DocumentClient();
 const s3 = new AWS.S3();
+const cognito = new AWS.CognitoIdentityServiceProvider();
+ 
+const { v4: uuidv4 } = require('uuid');
 
 const playersTable = process.env.PLAYER_TABLE_NAME;
 const playerAvatarBucket = process.env.PLAYER_AVATAR_BUCKET;
+const userPoolId = process.env.USER_POOL_ID;
 
-async function savePlayer(playerId, playerItem) {
-  let msg = {};
-  if (playerItem.newavatar !== '') {
-    const filekey = `${playerId}/avatar.jpg`;
-    msg.signedurl = await s3.getSignedUrl('putObject', {
-      Bucket: playerAvatarBucket,
-      Key: filekey,
-      ContentType: playerItem.fileType,
-    }).promise();
-    return { statusCode: 200, body: JSON.stringify(msg) };
-  }
-  const Item = {
-    playerName: playerId,
-    location: playerItem.location,
-    realName: playerItem.realName,
+async function updatePlayerDynamoDB(playerName, playerItem) {
+  const expressionAttributeValues = {};
+  let updateExpression = 'SET latestUpdate = :updateTime';
+  expressionAttributeValues[':updateTime'] = Date.now();
+  Object.keys(playerItem).forEach((key) => {
+    if (key !== 'playerName') {
+      updateExpression += `, ${key} = :${key}`;
+      expressionAttributeValues[`:${key}`] = playerItem[key];
+    }
+  });
+  const params = {
+    TableName: playersTable,
+    Key: { playerName },
+    UpdateExpression: updateExpression,
+    ExpressionAttributeValues: expressionAttributeValues,
+    ReturnValues: 'UPDATED_NEW',
   };
   try {
-    msg = await ddb.put({
-      TableName: playersTable,
-      Item,
-    }).promise();
-    return { statuCode: 200, body: JSON.stringify(msg) };
+    const msg = await ddb.update(params).promise();
+    return msg;
   } catch (e) {
-    console.error(`error saving player ${JSON.stringify(e.stack)}`);
+    console.error(`error saving player to DynamoDB ${JSON.stringify(e.stack)}`);
     return { statuCode: 500, body: 'Error saving player' };
   }
+}
+
+async function updatePlayerCognito(playerId, playerItem) {
+  let data = {};
+  const params = {
+    UserAttributes: [
+      {
+        Name: 'picture',
+        Value: playerItem.thumbnail,
+      },
+    ],
+    UserPoolId: userPoolId,
+    Username: playerId,
+  };
+  try {
+    data = await cognito.adminUpdateUserAttributes(params).promise();
+  } catch (error) {
+    console.error(`error updating cognito user attributes ${JSON.stringify(error.stack)}`);
+  }
+  return data;
+}
+
+async function savePlayer(playerId, playerItem) {
+  try {
+    const ddbResult = await updatePlayerDynamoDB(playerId, playerItem);
+    if (Object.prototype.hasOwnProperty.call(playerItem, 'avatar')) {
+      await updatePlayerCognito(playerId, playerItem);
+    }
+    return {
+      status: 200,
+      body: {
+        avatar: ddbResult.Attributes.avatar,
+        thumbnail: ddbResult.Attributes.thumbnail,
+      },
+    };
+  } catch (e) {
+    console.error(`error updating user ${JSON.stringify(e.stack)}`);
+    throw e;
+  }
+}
+
+async function signedUrl(playerName, playerItem) {
+  const filekey = `${playerName}/${uuidv4()}/avatar.${playerItem.fileType}`;
+  const signedurl = await s3.getSignedUrl('putObject', {
+    Bucket: playerAvatarBucket,
+    Key: filekey,
+    ContentType: playerItem.fileType,
+    Metadata: {
+      playerId: playerName,
+    },
+  });
+  return signedurl;
 }
 
 exports.handler = async (event) => {
   const { playerId } = event.pathParameters;
   const playerItem = JSON.parse(event.body);
+  if (Object.prototype.hasOwnProperty.call(playerItem, 'newavatar') && playerItem.newavatar !== '') {
+    const msg = {};
+    msg.signedurl = await signedUrl(playerId, playerItem);
+    return { statusCode: 200, body: JSON.stringify(msg) };
+  }
   const retVal = await savePlayer(playerId, playerItem);
   return retVal;
 };

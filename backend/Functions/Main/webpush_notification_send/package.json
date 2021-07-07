@@ -1,0 +1,15 @@
+{
+  "name": "webpush_notification_send",
+  "version": "1.0.0",
+  "description": "SimpleTriviaService send notification via web push",
+  "main": "webpush_notification_send/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Vito De Giosa",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0",
+    "web-push": "^3.3.3"
+  }
+}

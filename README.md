@@ -69,6 +69,10 @@ These steps will configure the Qwizardly UI to utilize the features deployed dur
 ![Image of AWSConfig.js file](images/awsconfig.png)
 > **Note:** These values are from steps 3 and 8 in the Backend Setup section.
 4. Run the command `npm run serve` to run the webapp locally.
+> **Note:** The avatar notification relies on service workers that are activated only in production build. To run this locally use the following steps instead of 4.
+>   1. Run the command `npm install -g serve`
+>   2. Run the command `npm run build` to create a production build for the frontend in the dist/ folder
+>   3. Run the command `serve -s -p 8080 dist/` to run the webapp locally on port 8080
 5. Once the app is running, navigate to http://localhost:8080 to use the Simple Trivia Service frontend.
 
 ### Optional: Host the Simple Trivia Service frontend using Amplify

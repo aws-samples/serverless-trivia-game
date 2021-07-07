@@ -39,10 +39,13 @@ export default new Vuex.Store({
             global: [],
             local: []
         },
-        user: {},
+        user: {
+            picture: ''
+        },
         profile: {
             location: '',
-            realName: ''
+            realName: '',
+            avatar: ''
         },
         ws: {
             connected: false
@@ -161,6 +164,9 @@ export default new Vuex.Store({
         setUserName(state, payload) {
             state.user.username = payload;
         },
+        setUserPicture(state, payload) {
+            state.user.picture = payload
+        },
         setUserJWT(state, payload) {
             state.user.Jwt = payload;
         },
@@ -172,6 +178,9 @@ export default new Vuex.Store({
         },
         setProfileName(state, payload) {
             state.profile.realName = payload;
+        },
+        setProfileAvatar(state, payload) {
+            state.profile.avatar = payload;
         },
         setConnected(state, payload) {
             state.ws.connected = payload;

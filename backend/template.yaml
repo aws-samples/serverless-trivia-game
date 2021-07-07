@@ -99,11 +99,14 @@ Resources:
         MarketplaceTable: !GetAtt DT.Outputs.MarketplaceTable
         PlayerTable: !GetAtt DT.Outputs.PlayerTable
         PlayerProgressTable: !GetAtt DT.Outputs.PlayerProgressTable
+        SubscriptionTable: !GetAtt DT.Outputs.SubscriptionTable
         PlayerProgressTopicName: !GetAtt PlayerProgressTopic.TopicName
         PlayerProgressTopicArn: !Ref PlayerProgressTopic
+        PlayerAvatarBucket: !Ref PlayerAvatarBucket
         PlayerWalletTopicName: !GetAtt PlayerWalletTopic.TopicName
         PlayerWalletTopicArn: !Ref PlayerWalletTopic
         UserPoolID: !Ref UserPool
+        UserPoolArn: !GetAtt UserPool.Arn
         AppClientID: !Ref UserPoolClient
         LeaderboardTopicName: !GetAtt LeaderboardTopic.TopicName
         LeaderboardTopicArn: !Ref LeaderboardTopic
@@ -256,6 +259,339 @@ Resources:
             Action: "iot:Publish"
             Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/chat/*"]]
 
+  # Web Push Notification
+  SSMCreateAndDeleteVapidParametersPolicy:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-SSMCreateAndDeleteParametersPolicy" ] ]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssm:PutParameter*
+              - ssm:DeleteParameters
+            Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:*'
+      Roles:
+        - !Ref WebpushVapidGenerateFunctionRole
+
+  WebpushVapidGenerateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/Main/webpush_vapid_generate/
+      MemorySize: 512
+      Environment:
+        Variables:
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+  WebpushVapidGenerateFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref WebpushVapidGenerateFunction]]
+
+  WebpushVapidKeys:
+    Type: Custom::WebpushVapidKeys
+    Properties:
+      ServiceToken: !GetAtt WebpushVapidGenerateFunction.Arn
+      Region: !Ref "AWS::Region"
+      StackName: !Sub ${AWS::StackName}
+
+  SSMGetVapidParametersPolicy:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-SSMGetVapidParametersPolicy" ] ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssm:GetParameter*
+            Resource:
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${WebpushVapidKeys.PublicKeyPath}'
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${WebpushVapidKeys.PrivateKeyPath}'
+      Roles:
+        - !Ref WebpushNotificationFunctionRole
+
+  WebpushNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/Main/webpush_notification_send/
+      MemorySize: 512
+      Environment:
+        Variables:
+          ENDPOINTS_TABLE_NAME: !GetAtt DT.Outputs.SubscriptionTable
+          REGION: !Sub "${AWS::Region}"
+          DOMAIN: !GetAtt HTTP.Outputs.HTTPApiGWURI
+          VAPID_PUBLIC_KEY_PATH: !GetAtt WebpushVapidKeys.PublicKeyPath
+          VAPID_PRIVATE_KEY_PATH: !GetAtt WebpushVapidKeys.PrivateKeyPath
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !GetAtt DT.Outputs.SubscriptionTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        AvatarWorkflowCompleted:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref STSEventBus
+            Pattern:
+              source:
+                - sts.avatar
+              detail-type:
+                - "Avatar Processing Completed"
+  WebpushNotificationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref WebpushNotificationFunction]]
+
+  RekognitionDetectModerationLabelsPolicy:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-RekognitionDetectModerationLabelsPolicy" ] ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - rekognition:DetectModerationLabels
+            Resource: '*'
+      Roles:
+        - !Ref PlayerAvatarModerateFunctionRole
+  
+  PlayerAvatarModerateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/Main/playeravatar_moderate/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_AVATAR_BUCKET: !Ref PlayerAvatarBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref PlayerAvatarBucket
+        - S3WritePolicy:
+            BucketName: !Ref PlayerAvatarBucket
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+  PlayerAvatarModerateLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerAvatarModerateFunction]]
+
+  PlayerAvatarThumbnailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/Main/playeravatar_thumbnail/
+      MemorySize: 1024
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref PlayerAvatarBucket
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+  PlayerAvatarThumbnailLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerAvatarThumbnailFunction]]
+
+  PlayerAvatarDeleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/Main/playeravatar_delete/
+      MemorySize: 1024
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref PlayerAvatarBucket
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+  PlayerAvatarDeleteLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerAvatarDeleteFunction]]
+            
+  PlayerAvatarCloudfrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties: 
+      CloudFrontOriginAccessIdentityConfig: 
+        Comment: !Sub 'Origin Access Identity ${AWS::StackName} for player avatars'
+  PlayerAvatarDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties: 
+      DistributionConfig:
+        Origins: 
+          - DomainName: !Join [ "", [ !Ref PlayerAvatarBucket, ".s3.amazonaws.com"]]
+            Id: 'S3PlayerAvatarOrigin'
+            S3OriginConfig:
+              OriginAccessIdentity: !Join [ "", [ "origin-access-identity/cloudfront/", !Ref PlayerAvatarCloudfrontOAI]]
+            ConnectionAttempts: 3
+            ConnectionTimeout: 10
+        Comment: 'SimpletriviaService: CloudFront Distribution for player avatars'
+        DefaultCacheBehavior: 
+          ForwardedValues: 
+            QueryString: false
+          TargetOriginId: 'S3PlayerAvatarOrigin'
+          ViewerProtocolPolicy: https-only
+        Enabled: true
+        IPV6Enabled: true
+        ViewerCertificate: 
+          CloudFrontDefaultCertificate: true
+
+  PlayerAvatarBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders:
+            - "*"
+          AllowedMethods:
+            - GET
+            - PUT
+            - HEAD
+          AllowedOrigins:
+            - "*"
+  
+  PlayerAvatarBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref PlayerAvatarBucket
+      PolicyDocument:
+        Version: 2008-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+            Principal:
+              CanonicalUser: !GetAtt PlayerAvatarCloudfrontOAI.S3CanonicalUserId
+            Resource: !Join ["", ["arn:aws:s3:::", !Ref PlayerAvatarBucket, "/*"]]
+
+
+  PlayerAvatarLoggingBucket: 
+    Type: AWS::S3::Bucket
+
+  PlayerAvatarLoggingBucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: 
+        Ref: PlayerAvatarLoggingBucket
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Sid: "AWSCloudTrailAclCheck"
+            Effect: "Allow"
+            Principal: 
+              Service: "cloudtrail.amazonaws.com"
+            Action: "s3:GetBucketAcl"
+            Resource: 
+              !Sub |-
+                arn:aws:s3:::${PlayerAvatarLoggingBucket}
+          - 
+            Sid: "AWSCloudTrailWrite"
+            Effect: "Allow"
+            Principal: 
+              Service: "cloudtrail.amazonaws.com"
+            Action: "s3:PutObject"
+            Resource:
+              !Sub |-
+                arn:aws:s3:::${PlayerAvatarLoggingBucket}/AWSLogs/${AWS::AccountId}/*
+            Condition: 
+              StringEquals:
+                s3:x-amz-acl: "bucket-owner-full-control"
+
+  PlayerAvatarTrail: 
+    Type: AWS::CloudTrail::Trail
+    DependsOn: 
+      - PlayerAvatarBucketPolicy
+    Properties: 
+      TrailName:
+        !Sub |-
+            ${PlayerAvatarBucket}-Trail
+      S3BucketName: 
+        Ref: PlayerAvatarLoggingBucket
+      IsLogging: true
+      IsMultiRegionTrail: false
+      EventSelectors:
+        - IncludeManagementEvents: false
+          DataResources:
+          - Type: AWS::S3::Object
+            Values:
+              - !Sub |-
+                arn:aws:s3:::${PlayerAvatarBucket}/
+      IncludeGlobalServiceEvents: false
+
+  STSEventBus:
+      Type: AWS::Events::EventBus
+      Properties: 
+        Name: !Sub ${AWS::StackName}
+
+  PlayerAvatarStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: player_avatar_statemachine/player_avatar.asl.json
+      DefinitionSubstitutions:
+        ModerateFunction: !Ref PlayerAvatarModerateFunction
+        ThumbnailFunction: !Ref PlayerAvatarThumbnailFunction
+        DeleteFunction: !Ref PlayerAvatarDeleteFunction
+        PlayerPutFunction: !GetAtt HTTP.Outputs.PlayerPutFunction
+        DistributionUrl: !GetAtt PlayerAvatarDistribution.DomainName
+        EventBusName: !Ref STSEventBus
+        EventSource: sts.avatar
+      Type: EXPRESS
+      Tracing:
+        Enabled: True
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+             LogGroupArn: !GetAtt PlayerAvatarLogGroup.Arn
+        IncludeExecutionData: true
+        Level: ALL
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref PlayerAvatarModerateFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref PlayerAvatarThumbnailFunction
+        - LambdaInvokePolicy:
+            FunctionName: !GetAtt HTTP.Outputs.PlayerPutFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref PlayerAvatarDeleteFunction
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref STSEventBus
+        - CloudWatchLogsFullAccess
+      Events:
+        AvatarUploadedEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - aws.s3
+              detail-type:
+                - 'AWS API Call via CloudTrail'
+              detail:
+                userIdentity:
+                  arn:
+                    - !Sub arn:aws:sts::${AWS::AccountId}:assumed-role/${HTTP.Outputs.PlayerPutFunctionRole}/${HTTP.Outputs.PlayerPutFunction}
+                eventSource:
+                  - s3.amazonaws.com
+                eventName:
+                  - PostObject
+                  - PutObject
+                requestParameters:
+                  bucketName:
+                    - !Ref PlayerAvatarBucket
+            InputPath: '$.detail.requestParameters'
+
+  PlayerAvatarLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Sub "/qwizardly/statemachines/playeravatar-${AWS::StackName}"
+  
   PlayerProgressTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -404,3 +740,7 @@ Outputs:
   appclientid:
     Description: "ID of the AppClient for STS"
     Value: !Ref UserPoolClient
+
+  webpushvapidpublickey:
+    Description: "Public Key fo the web push service"
+    Value: !GetAtt WebpushVapidKeys.PublicKey

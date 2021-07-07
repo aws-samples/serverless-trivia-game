@@ -128,6 +128,17 @@ export default{
         }
         return response;
     },
+    postPlayerSubscription(parms){
+        let jwt = parms.jwt;
+        delete parms.jwt;
+        let response;
+        try {
+            response = Api(jwt).post('/players/' + parms.playerName + '/subscriptions', parms);
+        } catch(e) {
+            console.error(JSON.stringify(e));
+        }
+        return response;
+    },
     getPlayerProgress(parms){
         let jwt = parms.jwt;
         delete parms.jwt;
