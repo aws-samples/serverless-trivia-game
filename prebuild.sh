@@ -66,6 +66,8 @@ cd ../purchasedgame_putkinesis
 npm install --quiet
 cd ../question_put
 npm install --quiet
+cd ../webpush_subscription_put
+npm install --quiet
 cd ../../IoT/answer_receive
 npm install --quiet
 cd ../game_cache

@@ -29,7 +29,12 @@
                 <template v-slot:item="props">
                     <tr>
                         <td>{{props.item.Position}}</td>
-                        <td>{{props.item.playerName}}</td>
+                        <td>
+                            <v-avatar color="accent" size="24" class="mr-2">
+                                <img v-if="props.item.playerAvatar" :src="props.item.playerAvatar" :alt="props.item.playerName"/>
+                                <v-icon v-else dark>mdi-account-circle</v-icon>
+                            </v-avatar>{{props.item.playerName}}
+                        </td>
                         <td>{{props.item.Score}}</td>
                     </tr>
                 </template>

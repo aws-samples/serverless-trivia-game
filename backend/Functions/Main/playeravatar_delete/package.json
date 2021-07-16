@@ -1,0 +1,14 @@
+{
+  "name": "playeravatar_delete",
+  "version": "1.0.0",
+  "description": "Simple Trivia Service Player avatar delete function",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Vito De Giosa",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.771.0"
+  }
+}

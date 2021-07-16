@@ -18,6 +18,7 @@ import App from './App.vue';
 import store from './store';
 import vuetify from './plugins/vuetify';
 import VueMeta from 'vue-meta';
+import './registerServiceWorker';
 
 Vue.use(VueMeta, {refreshOnceOnNavigation: true});
 

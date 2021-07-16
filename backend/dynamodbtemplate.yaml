@@ -208,6 +208,24 @@ Resources:
         WriteCapacityUnits: 6
       SSESpecification:
         SSEEnabled: True
+  SubscriptionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: topic
+        AttributeType: S
+      - AttributeName: endpoint
+        AttributeType: S
+      KeySchema:
+      - AttributeName: topic
+        KeyType: HASH
+      - AttributeName: endpoint
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: True
   MarketplaceTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -273,6 +291,11 @@ Outputs:
     Value: !Ref PlayerInventoryTable
     Export:
       Name: !Sub "${AWS::StackName}-PlayerInventoryTable"
+  SubscriptionTable:
+    Description: DynamoDB Table to manage Endpoints for Web Push Notification
+    Value: !Ref SubscriptionTable
+    Export:
+      Name: !Sub "${AWS::StackName}-SubscriptionTable"
   MarketplaceTable:
     Description: DynamoDB Table to manage Marketplace
     Value: !Ref MarketplaceTable
