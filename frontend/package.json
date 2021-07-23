@@ -15,7 +15,6 @@
     "amazon-cognito-identity-js": "^4.6.0",
     "aws-amplify": "^3.3.26",
     "aws-iot-device-sdk": "^2.2.6",
-    "aws-iot-device-sdk-v2": "^1.4.3",
     "aws-sdk": "^2.881.0",
     "axios": "^0.21.1",
     "core-js": "^2.6.12",
