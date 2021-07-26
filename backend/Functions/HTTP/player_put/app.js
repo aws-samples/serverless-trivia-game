@@ -97,7 +97,8 @@ async function savePlayer(playerId, playerItem) {
 }
 
 async function signedUrl(playerName, playerItem) {
-  const filekey = `${playerName}/${uuidv4()}/avatar.${playerItem.fileType}`;
+  const fileExt = playerItem.newavatar.split('.').pop();
+  const filekey = `${playerName}/${uuidv4()}/avatar.${fileExt}`;
   const signedurl = await s3.getSignedUrl('putObject', {
     Bucket: playerAvatarBucket,
     Key: filekey,

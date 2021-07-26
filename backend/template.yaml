@@ -261,9 +261,9 @@ Resources:
 
   # Web Push Notification
   SSMCreateAndDeleteVapidParametersPolicy:
-    Type: AWS::IAM::Policy
-    Properties: 
-      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-SSMCreateAndDeleteParametersPolicy" ] ]
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-SSMCreateAndDeleteParametersPolicy" ] ]
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -272,8 +272,6 @@ Resources:
               - ssm:PutParameter*
               - ssm:DeleteParameters
             Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:*'
-      Roles:
-        - !Ref WebpushVapidGenerateFunctionRole
 
   WebpushVapidGenerateFunction:
     Type: AWS::Serverless::Function
@@ -286,6 +284,7 @@ Resources:
           REGION: !Sub "${AWS::Region}"
       Policies:
         - CloudWatchLambdaInsightsExecutionRolePolicy
+        - !Ref SSMCreateAndDeleteVapidParametersPolicy
   WebpushVapidGenerateFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -300,9 +299,9 @@ Resources:
       StackName: !Sub ${AWS::StackName}
 
   SSMGetVapidParametersPolicy:
-    Type: AWS::IAM::Policy
+    Type: AWS::IAM::ManagedPolicy
     Properties: 
-      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-SSMGetVapidParametersPolicy" ] ]
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-SSMGetVapidParametersPolicy" ] ]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -349,9 +348,9 @@ Resources:
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref WebpushNotificationFunction]]
 
   RekognitionDetectModerationLabelsPolicy:
-    Type: AWS::IAM::Policy
+    Type: AWS::IAM::ManagedPolicy
     Properties: 
-      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-RekognitionDetectModerationLabelsPolicy" ] ]
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-RekognitionDetectModerationLabelsPolicy" ] ]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -425,7 +424,7 @@ Resources:
     Properties: 
       DistributionConfig:
         Origins: 
-          - DomainName: !Join [ "", [ !Ref PlayerAvatarBucket, ".s3.amazonaws.com"]]
+          - DomainName: !Join [ "", [ !Ref PlayerAvatarBucket, ".s3.", !Ref "AWS::Region", ".amazonaws.com"]]
             Id: 'S3PlayerAvatarOrigin'
             S3OriginConfig:
               OriginAccessIdentity: !Join [ "", [ "origin-access-identity/cloudfront/", !Ref PlayerAvatarCloudfrontOAI]]

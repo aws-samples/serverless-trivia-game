@@ -196,7 +196,7 @@ export default {
             if(e) {
                 this.uploading = true;
                 this.newavatar = URL.createObjectURL(e);
-                let parms = {jwt: this.myjwt, playerName: this.username, newavatar: 'newavatar', fileType: e.type} ;
+                let parms = {jwt: this.myjwt, playerName: this.username, newavatar: e.name, fileType: e.type} ;
                 let result = await DataService.setPlayer(parms);
                 if(result.status==200) {
                     this.uploadUrl = result.data.signedurl;
