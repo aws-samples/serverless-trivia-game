@@ -341,6 +341,7 @@ Resources:
                 - sts.avatar
               detail-type:
                 - "Avatar Processing Completed"
+                - "Avatar Processing Failed"
   WebpushNotificationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 

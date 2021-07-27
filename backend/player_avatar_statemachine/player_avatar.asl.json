@@ -1,107 +1,147 @@
 {
   "Comment": "Player avatar processing StepFunction",
-  "StartAt": "ModerateContent",
+  "StartAt": "Parallel",
   "States": {
-    "ModerateContent": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters":{  
-        "FunctionName":"${ModerateFunction}",
-        "Payload":{  
-          "bucketName.$":"$.bucketName",
-          "key.$":"$.key",
-          "contentType.$":"$.Content-Type"
-        },
-        "Qualifier":"HTTPLive"
-      },
-      "ResultPath": "$.moderation",
-      "ResultSelector":{
-        "appropriate.$":"$.Payload.appropriate",
-        "labels.$":"$.Payload.moderationLabels"
-      },
-      "Next": "CheckInappropriate"
-    },
-    "CheckInappropriate": {
-      "Type": "Choice",
-      "Choices": [
+    "Parallel": {
+      "Type": "Parallel",
+      "Branches": [
         {
-          "Variable": "$.moderation.appropriate",
-          "BooleanEquals": false,
-          "Next": "DeleteContent"
-        },
-        {
-          "Variable": "$.moderation.appropriate",
-          "BooleanEquals": true,
-          "Next": "CreateThumbnail"
+          "StartAt": "ModerateContent",
+          "States": {
+            "ModerateContent": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${ModerateFunction}",
+                "Payload": {
+                  "bucketName.$": "$.bucketName",
+                  "key.$": "$.key",
+                  "contentType.$": "$.Content-Type"
+                },
+                "Qualifier": "HTTPLive"
+              },
+              "ResultPath": "$.moderation",
+              "ResultSelector": {
+                "appropriate.$": "$.Payload.appropriate",
+                "labels.$": "$.Payload.moderationLabels"
+              },
+              "Next": "CheckInappropriate"
+            },
+            "CheckInappropriate": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.moderation.appropriate",
+                  "BooleanEquals": false,
+                  "Next": "DeleteContent"
+                },
+                {
+                  "Variable": "$.moderation.appropriate",
+                  "BooleanEquals": true,
+                  "Next": "CreateThumbnail"
+                }
+              ]
+            },
+            "CreateThumbnail": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${ThumbnailFunction}",
+                "Payload": {
+                  "bucketName.$": "$.bucketName",
+                  "key.$": "$.key",
+                  "contentType.$": "$.Content-Type",
+                  "playerId.$": "$.x-amz-meta-playerid"
+                },
+                "Qualifier": "HTTPLive"
+              },
+              "ResultPath": "$.profile",
+              "ResultSelector": {
+                "avatar.$": "States.Format('https://${DistributionUrl}/{}', $$.Execution.Input.key)",
+                "thumbnail.$": "States.Format('https://${DistributionUrl}/{}', $.Payload.key)"
+              },
+              "Next": "UpdateProfile"
+            },
+            "UpdateProfile": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${PlayerPutFunction}",
+                "Payload": {
+                  "pathParameters": {
+                    "playerId.$": "$.x-amz-meta-playerid"
+                  },
+                  "body.$": "States.JsonToString($.profile)"
+                },
+                "Qualifier": "HTTPLive"
+              },
+              "ResultPath": "$.output",
+              "ResultSelector": {
+                "result": "success",
+                "message": "Avatar accepted",
+                "data.$": "States.JsonToString($.Payload.body)"
+              },
+              "Next": "PublishOutput"
+            },
+            "DeleteContent": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${DeleteFunction}",
+                "Payload": {
+                  "bucketName.$": "$.bucketName",
+                  "key.$": "$.key"
+                },
+                "Qualifier": "HTTPLive"
+              },
+              "ResultPath": "$.deleteTask",
+              "Next": "BundleOutput"
+            },
+            "BundleOutput": {
+              "Type": "Pass",
+              "Parameters": {
+                "result": "error",
+                "message": "Avatar rejected",
+                "data.$": "States.JsonToString($.moderation)"
+              },
+              "ResultPath": "$.output",
+              "Next": "PublishOutput"
+            },
+            "PublishOutput": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::events:putEvents",
+              "Parameters": {
+                "Entries": [
+                  {
+                    "Detail": {
+                      "playerName.$": "$$.Execution.Input.x-amz-meta-playerid",
+                      "result.$": "$.output.result",
+                      "message.$": "$.output.message",
+                      "data.$": "$.output.data",
+                      "topic": "avatar"
+                    },
+                    "DetailType": "Avatar Processing Completed",
+                    "EventBusName": "${EventBusName}",
+                    "Source": "${EventSource}"
+                  }
+                ]
+              },
+              "End": true
+            }
+          }
         }
-      ]
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "PublishError"
+        }
+      ],
+      "End": true
     },
-    "DeleteContent": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters":{  
-        "FunctionName":"${DeleteFunction}",
-        "Payload":{  
-          "bucketName.$":"$.bucketName",
-          "key.$":"$.key"
-        },
-        "Qualifier":"HTTPLive"
-      },
-      "ResultPath": "$.deleteTask",
-      "Next": "BundleOutput"
-    },
-    "BundleOutput": {
-      "Type": "Pass",
-      "Parameters": {
-        "result": "error",
-        "message": "Avatar rejected",
-        "data.$": "States.JsonToString($.moderation)"
-      },
-      "ResultPath": "$.output",
-      "Next": "PublishOutput"
-    },
-    "CreateThumbnail": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters":{  
-        "FunctionName":"${ThumbnailFunction}",
-        "Payload":{  
-          "bucketName.$":"$.bucketName",
-          "key.$":"$.key",
-          "contentType.$":"$.Content-Type",
-          "playerId.$":"$.x-amz-meta-playerid"
-        },
-        "Qualifier":"HTTPLive"
-      },
-      "ResultPath": "$.profile",
-      "ResultSelector":{
-        "avatar.$":"States.Format('https://${DistributionUrl}/{}', $$.Execution.Input.key)",
-        "thumbnail.$":"States.Format('https://${DistributionUrl}/{}', $.Payload.key)"
-      },
-      "Next": "UpdateProfile"
-    },
-    "UpdateProfile": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters":{  
-        "FunctionName":"${PlayerPutFunction}",
-        "Payload":{  
-          "pathParameters": {
-            "playerId.$":"$.x-amz-meta-playerid"
-          },
-          "body.$": "States.JsonToString($.profile)"
-        },
-        "Qualifier":"HTTPLive"
-      },
-      "ResultPath": "$.output",
-      "ResultSelector": {
-        "result": "success",
-        "message": "Avatar accepted",
-        "data.$": "States.JsonToString($.Payload.body)"
-      },
-      "Next": "PublishOutput"
-    },
-    "PublishOutput": {
+    "PublishError": {
       "Type": "Task",
       "Resource": "arn:aws:states:::events:putEvents",
       "Parameters": {
@@ -109,12 +149,12 @@
           {
             "Detail": {
               "playerName.$": "$$.Execution.Input.x-amz-meta-playerid",
-              "result.$": "$.output.result",
-              "message.$": "$.output.message",
-              "data.$": "$.output.data",
+              "result": "error",
+              "message": "Avatar Workflow Exception",
+              "data": "{\"reason\":\"An unexpected error occured while processing the avatar.\"}",
               "topic": "avatar"
             },
-            "DetailType": "Avatar Processing Completed",
+            "DetailType": "Avatar Processing Failed",
             "EventBusName": "${EventBusName}",
             "Source": "${EventSource}"
           }
