@@ -12,20 +12,21 @@
   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+// SPDX-License-Identifier: MIT-0
+// Function: playeravatar_delete:app.js
 
-const Config = {
-        appName: 'Simple Trivia Service',
-        region: '', //e.g. your region deployed in 'us-east-1',
-    
-    //Modify these values with outputs from the backend deployment step
-        httpapi: '',// e.g. 'https://httpapid.execute-api.us-east-1.amazonaws.com'
-        wsapi: '', //e.g. 'wss://wsid.execute-api.us-east-1.amazonaws.com/Prod',
-        iotapi: '', //e.g. 'iotid-ats.iot.us-east-1.amazonaws.com',
-        identityPoolId: '', //e.g. 'us-east-1:uuid-of-identity-pool',
-        userPoolId: '', //e.g. 'us-east-1_userpoolid',
-        appClientId: '', //e.g. 'xmtnge6gn6ob46tkq26345iwt',
-        vapidPublicKey: '', //e.g. 'BKJLNm-RilHpXFTOitRqohNfeF3A_wrzd7ybhybWoWDgwcxaDIlcs1AsVxO7PbX3X7UlDYMZwKzAdu5ifRKAYpk'
-    
-    };
-    
-export default Config;
+/* eslint no-console: ["error", { allow: ["warn", "error"] }] */
+
+const AWS = require('aws-sdk');
+
+const s3 = new AWS.S3();
+
+exports.handler = async (event) => {
+  try {
+    const ret = await s3.deleteObject({ Bucket: event.bucketName, Key: event.key }).promise();
+    return ret;
+  } catch (err) {
+    console.error(`error deleting avatar ${JSON.stringify(err.stack)}`);
+    throw err;
+  }
+};

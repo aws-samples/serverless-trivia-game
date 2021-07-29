@@ -24,6 +24,10 @@
         <v-app-bar-nav-icon  class="black--text" @click="drawer = true"></v-app-bar-nav-icon>   
         <v-toolbar-title class="black--text">Welcome to {{ appName }}</v-toolbar-title>
         <v-spacer></v-spacer>
+        <v-avatar color="accent" size="24" v-if="isLoggedIn" class="mr-2">
+            <img v-if="avatar" :src="avatar" :alt="username"/>
+            <v-icon v-else dark>mdi-account-circle</v-icon>
+        </v-avatar>
         <v-toolbar-title v-if="isLoggedIn" class="black--text">Hi {{username}}</v-toolbar-title>
         <v-tooltip v-if="isConnected===false" bottom><template v-slot:activator="{ on, attrs }"><v-btn v-bind="attrs" v-on="on" icon><v-icon color="green" class="black--text">mdi-cloud-off-outline</v-icon></v-btn></template><span>WebSockets Disconnected</span></v-tooltip>
         <v-tooltip v-if="isConnected===true" bottom><template v-slot:activator="{ on, attrs }"><v-btn v-bind="attrs" v-on="on" icon><v-icon color="green" class="black--text">mdi-cloud-check-outline</v-icon></v-btn></template><span>WebSockets Connected</span></v-tooltip>
@@ -95,6 +99,7 @@
       </v-col></v-row></v-col>
 
           <div id="app" v-if=isLoggedIn>
+                    <Notifications />
                     <v-container v-if="getUIMode==='home'">
                         <v-col cols="12"><v-row><v-col cols="3"></v-col>
                         <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('chat')">
@@ -150,6 +155,7 @@ import ChatController from "./components/ChatController";
 import AdminController from "./components/AdminController";
 import CognitoUI from "./components/CognitoUI";
 import Player from "./components/Player";
+import Notifications from "./components/Notifications";
 import Marketplace from "./components/Marketplace";
 import Signout from './components/Signout';
 import DataService from '@/services/DataServices';
@@ -188,6 +194,7 @@ export default {
         ChatController,
         AdminController,
         Player,
+        Notifications,
         Marketplace,
         CognitoUI,
         Signout
@@ -196,6 +203,7 @@ export default {
     computed: {
         appName: function() { return Config.appName },
         username: function() { return this.$store.state.user.username},
+        avatar: function() { return this.$store.state.user.picture},
         myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken },
         isLoggedIn: function() {if(this.authState === 'signedin') {return true;} return false;},
         isConnected: function() {return this.$store.state.ws.connected;},
@@ -686,8 +694,9 @@ export default {
             let parms = {jwt: this.myjwt, playerName: this.username};
             let results = await DataService.getPlayer(parms);
             if(results.status===200){
-                this.$store.commit('setProfileLocation', results.data.location);
+                this.$store.commit('setProfileLocation', results.data.playerLocation);
                 this.$store.commit('setProfileName', results.data.realName);
+                this.$store.commit('setProfileAvatar', results.data.avatar);
             }
             parms = {jwt: this.myjwt, playerName: this.username};
             results = await DataService.getPlayerProgress(parms);
@@ -825,6 +834,7 @@ export default {
             .then(function(userData) {
                 self.$store.commit('setUserCognito', userData.cognitoSession);
                 self.$store.commit('setUserName', userData.userObj.username);
+                self.$store.commit('setUserPicture', userData.userObj.picture);
                 self.setAuthState('signedin');
             })
             .catch(function(error) {

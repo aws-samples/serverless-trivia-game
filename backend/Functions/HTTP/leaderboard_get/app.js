@@ -25,6 +25,7 @@ AWS.config.update = ({ region: process.env.REGION });
 const ddb = new AWS.DynamoDB.DocumentClient();
 
 const scoresTableName = process.env.SCOREBOARD_TABLE_NAME;
+const playerTableName = process.env.PLAYER_TABLE_NAME;
 
 async function getScoreboard(gameId, playerId) {
   let scoreboardData;
@@ -77,6 +78,38 @@ async function getScoreboard(gameId, playerId) {
   return scoreboard;
 }
 
+async function addPlayerThumbnail(scoreboard) {
+  const scoreboardWithThumbnails = [];
+  let playerProfilesMap;
+  const playerNames = scoreboard.map((item) => ({ playerName: item.playerName }));
+  const params = {
+    RequestItems: {
+      [playerTableName]: {
+        Keys: playerNames,
+        AttributesToGet: ['playerName', 'thumbnail'],
+      },
+    },
+  };
+  try {
+    const playerProfiles = await ddb.batchGet(params).promise();
+    playerProfilesMap = playerProfiles.Responses[playerTableName]
+      /* eslint-disable no-param-reassign, no-return-assign, no-sequences */
+      .reduce((map, obj) => (map[obj.playerName] = obj.thumbnail, map), {});
+    for (let i = 0; i < scoreboard.length; i += 1) {
+      scoreboardWithThumbnails.push({
+        Position: scoreboard[i].Position,
+        playerName: scoreboard[i].playerName,
+        playerAvatar: playerProfilesMap[scoreboard[i].playerName],
+        Score: scoreboard[i].Score,
+      });
+    }
+    return scoreboardWithThumbnails;
+  } catch (e) {
+    console.error(`could not get player profile info ${JSON.stringify(e.stack)}`);
+    return { statusCode: 500, body: 'Could not retrieve leaderboard' };
+  }
+}
+
 exports.handler = async (event) => {
   const { gameId } = event.pathParameters;
   let playerId = '';
@@ -86,5 +119,6 @@ exports.handler = async (event) => {
     }
   }
   const scoreboard = await getScoreboard(gameId, playerId);
-  return { statusCode: 200, body: JSON.stringify(scoreboard) };
+  const scoreboardWithThumbnails = await addPlayerThumbnail(scoreboard);
+  return { statusCode: 200, body: JSON.stringify(scoreboardWithThumbnails) };
 };
