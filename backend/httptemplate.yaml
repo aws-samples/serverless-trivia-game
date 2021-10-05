@@ -68,9 +68,6 @@ Parameters:
   UserPoolID:
     Type: String
     Description: Cognito User Pool ID for users
-  UserPoolArn:
-    Type: String
-    Description: Cognito User Pool Arn for users
   AppClientID:
     Type: String
     Description: Cognito App Client ID
@@ -166,20 +163,6 @@ Resources:
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerGetFunction]]
 
-  CognitoUpdateUserAttributesPolicy:
-    Type: AWS::IAM::Policy
-    Properties: 
-      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-CognitoUpdateUserAttributesPolicy" ] ]
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action:
-              - cognito-idp:AdminUpdateUserAttributes
-            Resource: !Ref UserPoolArn
-      Roles:
-        - !Ref PlayerPutFunctionRole
-
   PlayerPutFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -191,7 +174,6 @@ Resources:
           PLAYER_TABLE_NAME: !Sub "${PlayerTable}"
           PLAYER_AVATAR_BUCKET: !Ref PlayerAvatarBucket
           REGION: !Sub "${AWS::Region}"
-          USER_POOL_ID: !Ref UserPoolID
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Sub "${PlayerTable}"
