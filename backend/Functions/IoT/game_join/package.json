@@ -9,7 +9,6 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
-    "aws-sdk": "^2.771.0",
     "redis": "^3.1.2"
   }
 }

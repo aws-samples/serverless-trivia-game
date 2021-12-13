@@ -25,7 +25,7 @@ AWS.config.update = ({ region: process.env.REGION });
 const ddb = new AWS.DynamoDB.DocumentClient();
 
 const scoresTableName = process.env.SCOREBOARD_TABLE_NAME;
-const playerTableName = process.env.PLAYER_TABLE_NAME;
+const domain = process.env.CLOUDFRONT_DOMAIN;
 
 async function getScoreboard(gameId, playerId) {
   let scoreboardData;
@@ -55,6 +55,7 @@ async function getScoreboard(gameId, playerId) {
       Position: i + 1,
       playerName: playerData.playerName,
       Score: `${String(thisScore)}%`,
+      playerAvatar: `https://${domain}/${playerData.playerName}/current/thumb.jpg`
     });
     if (playerData.playerName === playerId) {
       includesPlayer = true;
@@ -72,12 +73,14 @@ async function getScoreboard(gameId, playerId) {
         Position: 'unknown',
         playerName: playerResult.Item.playerName,
         Score: `${String(Number(playerResult.Item.score) * 100)}%`,
+        playerAvatar: `${domain}$/{playerResult.Item.playerName}/current/thumb.jpg`
       });
     }
   }
   return scoreboard;
 }
 
+/*
 async function addPlayerThumbnail(scoreboard) {
   const scoreboardWithThumbnails = [];
   let playerProfilesMap;
@@ -93,7 +96,6 @@ async function addPlayerThumbnail(scoreboard) {
   try {
     const playerProfiles = await ddb.batchGet(params).promise();
     playerProfilesMap = playerProfiles.Responses[playerTableName]
-      /* eslint-disable no-param-reassign, no-return-assign, no-sequences */
       .reduce((map, obj) => (map[obj.playerName] = obj.thumbnail, map), {});
     for (let i = 0; i < scoreboard.length; i += 1) {
       scoreboardWithThumbnails.push({
@@ -109,6 +111,7 @@ async function addPlayerThumbnail(scoreboard) {
     return { statusCode: 500, body: 'Could not retrieve leaderboard' };
   }
 }
+*/
 
 exports.handler = async (event) => {
   const { gameId } = event.pathParameters;
@@ -119,6 +122,6 @@ exports.handler = async (event) => {
     }
   }
   const scoreboard = await getScoreboard(gameId, playerId);
-  const scoreboardWithThumbnails = await addPlayerThumbnail(scoreboard);
-  return { statusCode: 200, body: JSON.stringify(scoreboardWithThumbnails) };
+  //const scoreboardWithThumbnails = await addPlayerThumbnail(scoreboard);
+  return { statusCode: 200, body: JSON.stringify(scoreboard) };
 };

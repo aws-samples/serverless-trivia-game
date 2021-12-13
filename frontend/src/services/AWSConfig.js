@@ -15,7 +15,7 @@
 
 const Config = {
         appName: 'Simple Trivia Service',
-        region: '', //e.g. your region deployed in 'us-east-1',
+        region: 'us-east-1', //e.g. your region deployed in 'us-east-1',
     
     //Modify these values with outputs from the backend deployment step
         httpapi: '',// e.g. 'https://httpapid.execute-api.us-east-1.amazonaws.com'

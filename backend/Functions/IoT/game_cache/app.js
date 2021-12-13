@@ -26,14 +26,14 @@ AWS.config.apiVersions = { dynamodb: '2012-08-10', iot: '2015-05-28' };
 AWS.config.update = ({ region: process.env.REGION });
 
 const ddb = new AWS.DynamoDB.DocumentClient();
+const eb = new AWS.EventBridge();
 
-
-const activeGamesTable = process.env.ACTIVE_GAMES_TABLE_NAME;
 const gamesDetailTable = process.env.GAMES_DETAIL_TABLE_NAME;
 const redisEndpoint = process.env.REDIS_ENDPOINT;
 const redisPort = process.env.REDIS_PORT;
 const endpoint = process.env.IOT_ENDPOINT;
 const chatTopicArn = process.env.CHAT_TOPIC_ARN;
+const eventBusName = process.env.EVENT_BUS_NAME;
 
 const redisOptions = {
   host: redisEndpoint,
@@ -59,16 +59,22 @@ async function sendHostGameMessage(gameInfo) {
   }
 
 }
-
 async function addToActiveGames(Item) {
-  const TableName = activeGamesTable;
+  
   try {
-    await ddb.put({ TableName, Item }).promise();
-    //        console.log('Item', JSON.stringify(Item));
-    return Item;
-  } catch (e) {
-    console.error(`could not store game: ${JSON.stringify(e)}`);
-    return e;
+    const gameId = Item.gameId;
+    const gameType = 'LIVE=' + Item.playerName;
+    const starttime = Item.starttime;
+    const host = Item.playerName;
+    const event = { Entries: [{
+      DetailType: "IoT.game_host"  ,
+      Source: 'sts',
+      Detail: JSON.stringify({gameId, host, gameType, starttime}),
+      EventBusName: eventBusName
+    }]};
+    await eb.putEvents(event).promise();
+  } catch(e) {
+    console.error(`could not set game to active ${e}`);
   }
 }
 
@@ -133,7 +139,7 @@ async function sendIoTMessage(params) {
     await iotdata.publish(params).promise();
     return true;
   } catch (e) {
-    console.error(e);
+    console.error(`error sending to iot ${JSON.stringify(e)} - ${JSON.stringify(params)}`);
     return false;
   }
 }

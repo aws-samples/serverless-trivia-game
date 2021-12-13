@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: MIT-0
 // Function: playerprogression_put:app.js
 
-/* eslint no-console: ["error", { allow: ["warn", "error", "info"] }] */
+/* eslint no-console: ["error", { allow: ["warn", "error"] }] */
 
 const AWS = require('aws-sdk');
 
@@ -96,6 +96,5 @@ exports.handler = async (event) => {
     updateXP(msg.playerid, msg.experience, msg.wins),
     updateXP(msg.owner, msg.experience, 0),
   ])
-    .then(()  => {console.info('All player data saved')})
     .catch((e) => {console.error(`Error logging ${e.stack}`)});
 };

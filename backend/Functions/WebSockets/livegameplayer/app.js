@@ -26,14 +26,14 @@ const WSSend = require('/opt/index.js');
 AWS.config.apiVersions = { dynamodb: '2012-08-10', sns: '2010-03-31' };
 AWS.config.update = ({ region: process.env.REGION });
 
-const gamesTableName = process.env.GAMES_TABLE_NAME;
+const playerInventoryTableName = process.env.PLAYER_INVENTORY_TABLE_NAME;
 const playersTableName = process.env.PLAYERS_TABLE_NAME;
 const ddb = new AWS.DynamoDB.DocumentClient();
 
 async function joingame(incoming, connectionId, domainName, stage) {
   const gameData = {};
-  gameData.Key = { gameId: incoming.gameId, playerName: incoming.playerName };
-  gameData.TableName = gamesTableName;
+  gameData.Key = { pk: incoming.playerName, sk: incoming.gameId };
+  gameData.TableName = playerInventoryTableName;
   let activeGameResponse;
   try {
     activeGameResponse = await ddb.get(gameData).promise();
@@ -48,10 +48,16 @@ async function joingame(incoming, connectionId, domainName, stage) {
   }
 
   const item = {};
-  item.gameId = incoming.gameId;
+/*  item.gameId = incoming.gameId;
   item.connectionId = connectionId;
   item.userName = incoming.username;
-  item.role = 'PLAYER';
+  item.role = 'PLAYER';*/
+  const pk = incoming.gameId + "#" + incoming.hostname; 
+  item.pk = pk;
+  item.sk = 'PLAYER=' + connectionId;
+  item.playerName = incoming.username;
+  item.connectionId = connectionId;
+  item.gameId = incoming.gameId;
   const parms = {};
   parms.TableName = playersTableName;
   parms.Item = item;
@@ -70,16 +76,16 @@ async function joingame(incoming, connectionId, domainName, stage) {
     message.stage = stage;
     message.playerName = incoming.username;
     message.subaction = 'joined';
+    message.pk = pk;
     message.gameId = incoming.gameId;
-    /*    let snsParms = {};
-    snsParms.Message = JSON.stringify(message);
-    snsParms.TopicArn = topicarn; */
+    message.hostname = incoming.hostname;
     await WSSend.SendChat(message);
     const data = {};
     const msg = {};
     msg.channel = 'joinedlive';
-    data.gameId = activeGameResponse.Item.gameId;
+    data.gameId = activeGameResponse.Item.sk + "#" + activeGameResponse.Item.pk;
     data.quizName = activeGameResponse.Item.quizName;
+    data.hostname = incoming.hostname;
     msg.message = data;
     return { statusCode: 200, body: JSON.stringify(msg) };
   } catch (e) {

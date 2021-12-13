@@ -24,10 +24,15 @@ const s3 = new AWS.S3();
 
 exports.handler = async (event) => {
   try {
+    const folders = event.key.split('/');
     const image = await s3.getObject({ Bucket: event.bucketName, Key: event.key }).promise();
     const resizedImg = await sharp(image.Body).resize(100, 100, { fit: 'cover' }).toFormat('jpeg').toBuffer();
-    const path = event.key.substring(0, event.key.lastIndexOf('/'));
+    //performance fix - store thumbnail in /user/current to allow for calculatable retrieval
+    /*const path = event.key.substring(0, event.key.lastIndexOf('/'));
     const thumbnailKey = `${path}/thumb.jpg`;
+    await s3.putObject({ Bucket: event.bucketName, Body: resizedImg, Key: thumbnailKey }).promise();
+    */
+    const thumbnailKey = `${folders[0]}/current/thumb.jpg`;
     await s3.putObject({ Bucket: event.bucketName, Body: resizedImg, Key: thumbnailKey }).promise();
     return {
       status: 200,

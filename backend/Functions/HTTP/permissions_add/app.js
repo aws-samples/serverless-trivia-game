@@ -42,8 +42,8 @@ exports.handler = async (event) => {
   const body = JSON.parse(event.body);
   const principal = body.identityId;
   await attachPrincipalPolicy(ATTACH_POLICY, principal)
-  .then((value) => {
-    return { statusCode: 200, body: 'Operation successful' };
+  .then(() => {
+    return { statusCode: 200, body: 'Operation Successful' };
   })
   .catch((err)  => {
     console.error('Could not attach policy', JSON.stringify(err));

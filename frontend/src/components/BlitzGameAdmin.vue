@@ -161,7 +161,7 @@ export default {
             this.mode = 'game';
         },
         sendGameOver() {
-            let message = { gameId: this.gameId };
+            let message = { playerName: this.username, gameId: this.gameId };
             this.$emit('send-iot-message', `games/${this.liveAdminGameKey}/gameover`, JSON.stringify(message));
             this.$store.commit('setBlitzPlayerGameOver', true);
         }

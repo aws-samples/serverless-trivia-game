@@ -30,6 +30,7 @@ const playerInventoryTableName = process.env.PLAYER_INVENTORY_TABLE;
 
 async function saveGameHeader(gameData) {
   gameData.gameId = uuidv4();
+  gameData.sk = gameData.gameId;
   try {
     await ddb.put({
       TableName: playerInventoryTableName,

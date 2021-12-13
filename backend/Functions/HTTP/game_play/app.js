@@ -26,10 +26,10 @@ AWS.config.update = ({ region: process.env.REGION });
 
 const ddb = new AWS.DynamoDB.DocumentClient();
 const questionsTableName = process.env.QUESTIONS_TABLE_NAME;
-const gamesTableName = process.env.GAMES_TABLE_NAME;
+const gamesTableName = process.env.PLAYER_INVENTORY_TABLE_NAME;
 
-async function joinGame(gameId, playerName) {
-  const Key = { gameId, playerName };
+async function joinGame(sk, pk) {
+  const Key = { pk, sk };
   let activeGameResponse;
   try {
     activeGameResponse = await ddb.get({
@@ -52,7 +52,7 @@ async function joinGame(gameId, playerName) {
     + 'answerB, answerC, answerD, questionURI';
   const queryparms = {
     TableName: questionsTableName,
-    ExpressionAttributeValues: { ':v1': gameId },
+    ExpressionAttributeValues: { ':v1': sk },
     KeyConditionExpression: 'gameId = :v1',
     ProjectionExpression: pe,
   };

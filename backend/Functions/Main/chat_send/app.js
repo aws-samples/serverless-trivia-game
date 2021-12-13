@@ -30,7 +30,7 @@ async function sendIoTMessage(params) {
     await iotdata.publish(params).promise();
     return true;
   } catch (e) {
-    console.error(`error sending to iot ${JSON.stringify(e)}`);
+    console.error(`error sending to iot ${JSON.stringify(e)} ${JSON.stringify(params)}`);
     return false;
   }
 }

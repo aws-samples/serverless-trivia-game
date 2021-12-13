@@ -1,0 +1,14 @@
+{
+  "name": "gameplayer_delete",
+  "version": "1.0.0",
+  "description": "delete active game player data",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.814.0"
+  }
+}

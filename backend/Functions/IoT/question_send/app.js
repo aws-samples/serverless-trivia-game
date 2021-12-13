@@ -89,11 +89,10 @@ async function sendQuestionToTopic(topic, question) {
     payload: JSON.stringify(question),
     qos: 0,
   };
-
   try {
     await iotdata.publish(params).promise();
   } catch (e) {
-    console.error('error sending to topic', e);
+    console.error(`error sending to iot ${JSON.stringify(e)} ${JSON.stringify(params)}`);
   }
 }
 
