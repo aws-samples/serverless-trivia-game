@@ -26,8 +26,8 @@ const ddb = new AWS.DynamoDB.DocumentClient();
 const marketplaceTableName = process.env.MARKETPLACE_TABLE_NAME;
 const playerInventoryTable = process.env.PLAYER_INVENTORY_TABLE_NAME;
 
-async function ListOnMarketplace(playerName, gameId, amount) {
-  const Key = { playerName, gameId };
+async function ListOnMarketplace(pk, sk, amount) {
+  const Key = { pk, sk };
   try {
     const getGame = await ddb.get({ TableName: playerInventoryTable, Key }).promise();
     if (Object.prototype.hasOwnProperty.call(getGame, 'Item')) {
@@ -48,6 +48,12 @@ async function ListOnMarketplace(playerName, gameId, amount) {
       const { Item } = getGame;
       Item.usage = 1;
       Item.amount = amount;
+      //Updates for new Inventory Game table
+      Item.gameId = Item.sk;
+      Item.playerName = Item.pk;
+      delete(Item.pk);
+      delete(Item.sk);
+      //End updates for new Inventory Game table
       const result = await ddb.put({ TableName: marketplaceTableName, Item }).promise();
       return { statusCode: 200, body: JSON.stringify({ gameid: result.gameId }) };
     }

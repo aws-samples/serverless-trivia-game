@@ -36,14 +36,12 @@ const redisClient = redis.createClient(redisOptions);
 
 const iotdata = new AWS.IotData({ endpoint });
 
-const kinesis = new AWS.Kinesis();
-
 async function sendIoTMessage(params) {
   try {
     await iotdata.publish(params).promise();
     return true;
   } catch (e) {
-    console.error(e);
+    console.error(`error sending to iot ${JSON.stringify(e)} ${JSON.stringify(params)}`);
     return false;
   }
 }

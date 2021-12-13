@@ -28,13 +28,17 @@ zip -qr utilslayer.zip .
 cd ../../../
 echo "installing node_modules"
 cd Functions/HTTP
-cd activegames_list
+cd activegames_delete
+npm install --quiet
+cd ../activegames_list
 npm install --quiet
 cd ../game_activate
 npm install --quiet
 cd ../game_answer
 npm install --quiet
 cd ../game_get
+npm install --quiet
+cd ../game_host
 npm install --quiet
 cd ../game_listonmarketplace
 npm install --quiet
@@ -82,11 +86,11 @@ cd ../question_send
 npm install --quiet
 cd ../../WebSockets/auth
 npm install
+cd ../gameplayer_delete
+npm install --quiet
 cd ../livegameadmin
 npm install --quiet
 cd ../livegameplayer
-npm install --quiet
-cd ../onconnect
 npm install --quiet
 cd ../ondisconnect
 npm install --quiet

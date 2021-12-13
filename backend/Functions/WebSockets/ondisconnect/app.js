@@ -24,21 +24,33 @@ AWS.config.apiVersions = { dynamodb: '2012-08-10' };
 AWS.config.update = ({ region: process.env.REGION });
 
 const ddb = new AWS.DynamoDB.DocumentClient();
-const tablename = process.env.CONNECTIONS_TABLE_NAME;
+const tablename = process.env.GAME_PLAYERS_TABLE_NAME;
+
+async function delete_records(records) {
+  records.Items.forEach(record => {
+    let deleteParams = {
+      TableName: tablename,
+      Key: {
+        pk: record.pk,
+        sk: record.sk
+        }
+      };
+    try {
+      ddb.delete(deleteParams).promise();
+    } catch (err) {
+      console.error(`could not delete record due to ${err}`);
+    }
+  });
+}
 
 exports.handler = async (event) => {
-  const deleteParams = {
-    TableName: tablename,
-    Key: {
-      connectionId: event.requestContext.connectionId,
-    },
-  };
-
-  try {
-    await ddb.delete(deleteParams).promise();
-  } catch (err) {
-    return { statusCode: 500, body: `Failed to disconnect: ${JSON.stringify(err.stack)}` };
-  }
-
-  return { statusCode: 200, body: 'Disconnected.' };
+  const query = { TableName: tablename, IndexName: 'gsi-connectionId',
+    KeyConditionExpression: 'connectionId = :connId',
+    ExpressionAttributeValues: {
+      ':connId': event.requestContext.connectionId
+    }};
+  
+  const results = await ddb.query(query).promise();
+  
+  return delete_records(results);
 };

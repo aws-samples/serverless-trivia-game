@@ -220,6 +220,7 @@ export default {
         questionnumber: function() {return this.$store.state.live.player.question.questionNumber},
         scoreboardnote: function() {return this.$store.state.live.player.scoreboardnote},
         sortorder: function() {if(this.scoreboardnote==='noquestionfinal'){return false}return true;},
+        liveGameHost: function() { return this.$store.state.live.player.host; },
         multiChoiceQuestionType: function() { if(Object.prototype.hasOwnProperty.call(this.question, 'answerA')){ return true;} return false; },
         hasalternatives: function() {
             if(typeof this.$store.state.live.player.alternatives==='undefined'){
@@ -251,7 +252,7 @@ export default {
     }},
     methods: {
         answer: function(answer) {
-            let data = {playerName: this.username, gameId: this.gameid, 
+            let data = {playerName: this.username, gameId: this.gameid, hostname: this.liveGameHost,
                 questionNumber: this.question.questionNumber, response: answer, subaction: 'answered'};
             let msg = {message: 'liveplayer', data: data};
             this.$store.commit('setLivePlayerUIMode', 'waiting');

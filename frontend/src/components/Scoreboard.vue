@@ -31,7 +31,7 @@
                         <td>{{props.item.Position}}</td>
                         <td>
                             <v-avatar color="accent" size="24" class="mr-2">
-                                <img v-if="props.item.playerAvatar" :src="props.item.playerAvatar" :alt="props.item.playerName"/>
+                                <img v-if='checkFile(props.item.playerAvater)===true' :src="props.item.playerAvatar"/>
                                 <v-icon v-else dark>mdi-account-circle</v-icon>
                             </v-avatar>{{props.item.playerName}}
                         </td>
@@ -91,6 +91,7 @@
 
 <script>
 import DataService from '@/services/DataServices';
+import axios from 'axios';
 
 export default {
     name: 'Scoreboard',
@@ -102,15 +103,16 @@ export default {
         gamelistheaders: [ {text: 'Quiz', align:'left', sortable:'true', value:'quizName'},
         {text:'Host', value:'host'}, {text:'Question Type', value:'questionType'},
         {text:'Mode', value:'quizMode'}],
-        search: ''
-    }},
-
+        search: '',
+        api:''
+    };},
+    
     computed: {
         scoreboard: function() { return this.$store.state.scoreboard.players; } ,
         quizname: function() { return this.$store.state.game.quizName; },
         gamelist: function() {return this.$store.state.games.gamelist;},
         username: function() { return this.$store.state.user.username; },
-        myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken }
+        myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken; }
     },
 
     methods: {
@@ -120,8 +122,21 @@ export default {
             this.$store.commit('setQuizName', game.quizName);
             this.$store.commit('setScoreboard', results.data);
             this.$store.commit('setGameState', 'scoreboard');
+        }, 
+        async checkFile(file) {
+            axios.get(file)
+                .then(function (response) {
+                    // handle success
+                    console.log('got the file');
+                    console.log(`${JSON.stringify(response)}`);
+                    return true;})
+                .catch(function (error) {
+                    // handle error
+                    console.log(`${JSON.stringify(error)}`);
+                    return false;});
         }
+        
     }
-}
+};
 </script>
 

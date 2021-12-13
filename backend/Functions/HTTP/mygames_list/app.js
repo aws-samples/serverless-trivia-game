@@ -25,17 +25,17 @@ AWS.config.update = ({ region: process.env.REGION });
 const ddb = new AWS.DynamoDB.DocumentClient();
 const playerInventoryTableName = process.env.PLAYER_INVENTORY_TABLE;
 
-async function getMyGames(playerName) {
+async function getMyGames(pk) {
   // provide list of games for user back to UI
   // OwnerGames Index on
   // gameinfo.playerName
   const parms = {};
   parms.TableName = playerInventoryTableName;
   parms.KeyConditionExpression = '#key = :v1';
-  parms.ExpressionAttributeValues = { ':v1': playerName };
-  parms.ExpressionAttributeNames = { '#key': 'playerName' };
-  parms.ProjectionExpression = 'gameId, quizName, quizDescription, '
-    + 'questionType, quizMode, inventoryType';
+  parms.ExpressionAttributeValues = { ':v1': pk };
+  parms.ExpressionAttributeNames = { '#key': 'pk' };
+  parms.ProjectionExpression = 'sk, gameId, quizName, quizDescription, '
+    + 'questionType, quizMode, inventoryType, category';
   let results;
   try {
     results = await ddb.query(parms).promise();

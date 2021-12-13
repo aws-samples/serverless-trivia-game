@@ -25,14 +25,14 @@ AWS.config.apiVersions = { dynamodb: '2012-08-10', iot: '2015-05-28', sns: '2010
 AWS.config.update = ({ region: process.env.REGION });
 
 const ddb = new AWS.DynamoDB.DocumentClient();
-
 const sns = new AWS.SNS();
+const eb = new AWS.EventBridge();
 
-const activeGamesTable = process.env.ACTIVE_GAMES_TABLE_NAME;
 const scoreboardTable = process.env.LEADER_BOARD_TABLE_NAME;
 const playerProgressTopic = process.env.PLAYER_PROGRESS_TOPIC;
 const redisEndpoint = process.env.REDIS_ENDPOINT;
 const redisPort = process.env.REDIS_PORT;
+const eventBusName = process.env.EVENT_BUS_NAME;
 
 const redisOptions = {
   host: redisEndpoint,
@@ -59,15 +59,20 @@ async function deleteCache(gameInfo) {
 }
 
 async function deleteActiveGame(gameInfo) {
-  const TableName = activeGamesTable;
-  const Key = { gameId: gameInfo.gameId, playerName: gameInfo.playerName };
+  const event = { Entries: [{
+    DetailType: "IoT.game_end"  ,
+    Source: 'sts',
+    Detail: JSON.stringify({gameId: gameInfo.gameId, playerName: gameInfo.playerName}),
+    EventBusName: eventBusName
+  }]};
   try {
-    await ddb.delete({ TableName, Key }).promise();
+    await eb.putEvents(event).promise();
     return true;
-  } catch (e) {
-    console.error(`Error while deleting active game ${e}`);
+  } catch(e) {
+    console.error(`error sending to iot ${JSON.stringify(e)} ${JSON.stringify(event)}`);
     return false;
   }
+
 }
 
 async function sendPlayerProgressMessage(progressMsg) {

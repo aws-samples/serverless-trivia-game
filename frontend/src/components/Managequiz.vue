@@ -67,16 +67,17 @@ export default {
         setMode(newmode) {
             this.$store.commit('setAdminMode', newmode);
         },
-        async getQuestions(name, description, questions, type, mode) {
+        async getQuestions(name, description, questions, type, mode, category) {
             this.quizName = name;
             this.quizDescription = description;
             this.quizNumberOfQuestions = +questions;
             this.questionType = type;
             this.quizMode = mode;
+            this.quizCategory = category;
             this.questionNumber = 1;
             //save the header as the first question to get the gameid
-            let header = {quizName: name, quizDescription: description, questionType: type,
-                quizMode: mode, playerName: this.username, usage: 'unlimited' };
+            let header = {pk: this.username, quizName: name, quizDescription: description, questionType: type,
+                quizMode: mode, playerName: this.username, usage: 'unlimited', category: this.quizCategory };
             header.quizName = name;
             let response = await this.saveHeader(header);
             this.$store.commit('setGameId', response.data.gameid);

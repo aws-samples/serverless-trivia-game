@@ -79,7 +79,7 @@ export default {
             if(game.quizMode==='Single Player'){
                 let message = {playerName: this.username, quizName: game.quizName, gameId: game.gameId, 
                     questionType: game.questionType, quizMode: game.quizMode, quizDescription: game.quizDescription,
-                    starttime: String(new Date())};
+                    starttime: String(new Date()), category: game.category};
                 let response = await this.host(message);
                 if(response.data.gameId === game.gameId) {
                     alert('Game ' + game.quizName + ' is now being run');
@@ -88,7 +88,7 @@ export default {
                 let message = {message: 'liveadmin', data: {
                     subaction: 'hostgame', playerName: this.username, quizName: game.quizName, 
                     gameId: game.gameId, questionType: game.questionType, quizMode: game.quizMode, 
-                    starttime: String(new Date()), channel: 'globalchat'
+                    starttime: String(new Date()), channel: 'globalchat', category: game.category
                 }};
                 this.$emit('send-message', JSON.stringify(message));
                 let results = await DataService.getFullGame({gameId: game.gameId, playerName: this.username, jwt: this.myjwt});
@@ -106,7 +106,7 @@ export default {
                 this.$store.commit('setAdminLiveBlitzQuestion', '');
                 this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/questionlist`);
                 this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/question`);
-                this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/joined/+`);
+                this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/join/+`);
                 this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/answer/+`);
                 this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/answers/+`);
                 this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/results/+`);
@@ -115,7 +115,7 @@ export default {
                 this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/endgame`);
                 let message = { playerName: this.username, quizName: game.quizName, 
                     gameId: game.gameId, questionType: game.questionType, 
-                    quizMode: game.quizMode, starttime: `${String(new Date())}`};
+                    quizMode: game.quizMode, starttime: `${String(new Date())}`, category: game.category};
                 this.$emit('send-iot-message', 'hostgame', JSON.stringify(message));
                 this.$store.commit('setAdminLiveBlitzMode', true);
                 this.$store.commit('setLiveAdminUIMode', 'lobby');

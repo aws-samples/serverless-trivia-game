@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: MIT-0
 // Function: game_answer:app.js
 
-/* eslint no-console: ["error", { allow: ["warn", "error", "info"] }] */
+/* eslint no-console: ["error", { allow: ["warn", "error"] }] */
 
 const AWS = require('aws-sdk');
 
@@ -78,7 +78,7 @@ async function sendLeaderboardMessage(leaderboardMsg, player, owner) {
 
 async function sendScoreEvents(Data) {
   let ret = await kinesis.putRecord({Data, StreamName: scoreStream, PartitionKey: 'score001' }).promise();
-  if(ret.hasOwnProperty('ShardId')){
+  if(Object.prototype.hasOwnProperty.call(ret, 'ShardId')){
     return 1;
   } else {
     console.error(`error writing to stream ${JSON.stringify(ret)}`);
@@ -141,7 +141,7 @@ async function scoreGame(gameId, gameInfo) {
       const analytic = {
         questionNumber: question.questionNumber,
         playerResponse: playerAnswer,
-        correctResponse };
+        correctResponse, playerCorrect: playercorrect };
       analytics.push(analytic);
     });
 
@@ -149,7 +149,6 @@ async function scoreGame(gameId, gameInfo) {
     const analyticMsg = {playerName: gameInfo.playerName, dateOfQuiz: dateString(), gameId: gameInfo.gameId, 
       quizMode: gameInfo.quizMode, questions: analytics};
     const score = points / maxPoints;
-    console.info(`${gameInfo.playerName} scored ${String(score)}`);
     let scoremsg = { score, answerboard };
     const leaderboardJSON = {
       gameId, quizName, playerid: gameInfo.playerName, score,
@@ -163,7 +162,6 @@ async function scoreGame(gameId, gameInfo) {
         sendLeaderboardMessage(leaderboardmsg, gameInfo.playerName, owner),
         sendScoreEvents(JSON.stringify(analyticMsg))],
     )
-      .then(() => { console.info(`scoremsg ${JSON.stringify(scoremsg)}`); })
       .catch((e) => {
         console.error(`error sending progress ${JSON.stringify(e.stack)}`);
         scoremsg = 'error';

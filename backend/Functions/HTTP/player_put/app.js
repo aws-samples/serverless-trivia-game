@@ -25,7 +25,7 @@ const ddb = new AWS.DynamoDB.DocumentClient();
 const s3 = new AWS.S3();
 const cognito = new AWS.CognitoIdentityServiceProvider();
  
-const { v4: uuidv4 } = require('uuid');
+//const { v4: uuidv4 } = require('uuid');
 
 const playersTable = process.env.PLAYER_TABLE_NAME;
 const playerAvatarBucket = process.env.PLAYER_AVATAR_BUCKET;
@@ -98,7 +98,8 @@ async function savePlayer(playerId, playerItem) {
 
 async function signedUrl(playerName, playerItem) {
   const fileExt = playerItem.newavatar.split('.').pop();
-  const filekey = `${playerName}/${uuidv4()}/avatar.${fileExt}`;
+  const now = new Date();
+  const filekey = `${playerName}/${now.toISOString()}/avatar.${fileExt}`;
   const signedurl = await s3.getSignedUrl('putObject', {
     Bucket: playerAvatarBucket,
     Key: filekey,

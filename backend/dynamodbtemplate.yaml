@@ -13,53 +13,11 @@ Resources:
     Type: "AWS::ResourceGroups::Group"
     Properties:
       Name: !Sub "${ResourceGroupName}"
-  ConnectionsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      AttributeDefinitions:
-      - AttributeName: connectionId
-        AttributeType: S
-      KeySchema:
-      - AttributeName: connectionId
-        KeyType: HASH
-      ProvisionedThroughput:
-        ReadCapacityUnits: 6
-        WriteCapacityUnits: 6
-      SSESpecification:
-        SSEEnabled: True
-  ActiveGamesTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      AttributeDefinitions:
-      - AttributeName: gameId
-        AttributeType: S
-      - AttributeName: playerName
-        AttributeType: S
-      KeySchema:
-      - AttributeName: gameId
-        KeyType: HASH
-      - AttributeName: playerName
-        KeyType: RANGE
-      GlobalSecondaryIndexes:
-        - IndexName: HostGames
-          KeySchema:
-          - AttributeName: playerName
-            KeyType: HASH
-          - AttributeName: gameId
-            KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
-          ProvisionedThroughput:
-            ReadCapacityUnits: 5
-            WriteCapacityUnits: 5
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
-      SSESpecification:
-        SSEEnabled: True
+
   GamesDetailTable:
     Type: AWS::DynamoDB::Table
     Properties:
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
       - AttributeName: gameId
         AttributeType: S
@@ -70,14 +28,20 @@ Resources:
         KeyType: HASH
       - AttributeName: questionNumber
         KeyType: RANGE
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
       SSESpecification:
         SSEEnabled: True
+      Tags:
+        - Key: Dashboard
+          Value: IoT
+        - Key: Dashboard
+          Value: WebSocket
+        - Key: Dashboard
+          Value: HTTP
+
   HighScoreTable:
     Type: AWS::DynamoDB::Table
     Properties:
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
       - AttributeName: gameId
         AttributeType: S
@@ -99,57 +63,66 @@ Resources:
           KeyType: RANGE
         Projection:
           ProjectionType: ALL
-        ProvisionedThroughput:
-          ReadCapacityUnits: 5
-          WriteCapacityUnits: 5
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
       SSESpecification:
         SSEEnabled: True
-  GamePlayersTable:
+      Tags:
+        - Key: Dashboard
+          Value: IoT
+        - Key: Dashboard
+          Value: WebSocket
+        - Key: Dashboard
+          Value: HTTP
+
+  GamePlayersTablev2:
     Type: AWS::DynamoDB::Table
     Properties:
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-      - AttributeName: gameId
+      - AttributeName: pk
+        AttributeType: S
+      - AttributeName: sk
         AttributeType: S
       - AttributeName: connectionId
-        AttributeType: S
-      - AttributeName: role
         AttributeType: S
       KeySchema:
-      - AttributeName: gameId
+      - AttributeName: pk
         KeyType: HASH
-      - AttributeName: connectionId
+      - AttributeName: sk
         KeyType: RANGE
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
       SSESpecification:
         SSEEnabled: True
-      LocalSecondaryIndexes:
-      - IndexName: GameRole
-        KeySchema:
-        - AttributeName: gameId
-          KeyType: HASH
-        - AttributeName: role
-          KeyType: RANGE
-        Projection:
-          ProjectionType: ALL
+      GlobalSecondaryIndexes:
+        - IndexName: gsi-connectionId
+          KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+          - AttributeName: pk
+            KeyType: RANGE
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes:
+              - sk
+      Tags:
+        - Key: Dashboard
+          Value: IoT
+        - Key: Dashboard
+          Value: WebSocket
+        - Key: Dashboard
+          Value: HTTP
+
   PlayerTable:
     Type: AWS::DynamoDB::Table
     Properties:
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
       - AttributeName: playerName
         AttributeType: S
       KeySchema:
       - AttributeName: playerName
         KeyType: HASH
-      ProvisionedThroughput:
-        ReadCapacityUnits: 6
-        WriteCapacityUnits: 6
       SSESpecification:
         SSEEnabled: True
+
   PlayerWalletTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -164,9 +137,11 @@ Resources:
         WriteCapacityUnits: 6
       SSESpecification:
         SSEEnabled: True
+
   PlayerProgressTable:
     Type: AWS::DynamoDB::Table
     Properties:
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
       - AttributeName: playerName
         AttributeType: S
@@ -175,9 +150,6 @@ Resources:
       KeySchema:
       - AttributeName: playerName
         KeyType: HASH
-      ProvisionedThroughput:
-        ReadCapacityUnits: 6
-        WriteCapacityUnits: 6
       SSESpecification:
         SSEEnabled: True
       GlobalSecondaryIndexes:
@@ -187,27 +159,61 @@ Resources:
             KeyType: HASH
           Projection:
             ProjectionType: ALL
-          ProvisionedThroughput:
-            ReadCapacityUnits: 5
-            WriteCapacityUnits: 5
-  PlayerInventoryTable:
+      Tags:
+        - Key: Dashboard
+          Value: IoT
+        - Key: Dashboard
+          Value: WebSocket
+        - Key: Dashboard
+          Value: HTTP
+
+  PlayerInventoryTablev2:
     Type: AWS::DynamoDB::Table
     Properties:
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-      - AttributeName: playerName
+      - AttributeName: pk
         AttributeType: S
-      - AttributeName: gameId
+      - AttributeName: sk
+        AttributeType: S
+      - AttributeName: gameType
         AttributeType: S
       KeySchema:
-      - AttributeName: playerName
+      - AttributeName: pk
         KeyType: HASH
-      - AttributeName: gameId
+      - AttributeName: sk
         KeyType: RANGE
-      ProvisionedThroughput:
-        ReadCapacityUnits: 6
-        WriteCapacityUnits: 6
       SSESpecification:
         SSEEnabled: True
+      GlobalSecondaryIndexes:
+        - IndexName: gsi-GameType
+          KeySchema:
+          - AttributeName: gameType
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes:
+              - gameId
+              - startTime
+              - channel
+              - hostConnection
+              - hostName
+              - category
+              - pk
+              - quizName
+              - quizDescription
+              - quizMode
+              - questionType
+      Tags:
+        - Key: Dashboard
+          Value: IoT
+        - Key: Dashboard
+          Value: WebSocket
+        - Key: Dashboard
+          Value: HTTP
+
   SubscriptionTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -226,6 +232,7 @@ Resources:
         WriteCapacityUnits: 5
       SSESpecification:
         SSEEnabled: True
+
   MarketplaceTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -246,16 +253,6 @@ Resources:
         SSEEnabled: True
 
 Outputs:
-  ConnectionsTable:
-    Description: DynamoDB Table to manage WebSocket Connections
-    Value: !Ref ConnectionsTable
-    Export:
-      Name: !Sub "${AWS::StackName}-ConnectionsTable"
-  ActiveGamesTable:
-    Description: DynamoDB Table to manage Active / Running Games
-    Value: !Ref ActiveGamesTable
-    Export:
-      Name: !Sub "${AWS::StackName}-ActiveGamesTable"
   GamesDetailTable:
     Description: DynamoDB Table to manage Game Details
     Value: !Ref GamesDetailTable
@@ -268,7 +265,7 @@ Outputs:
       Name: !Sub "${AWS::StackName}-HighScoreTable"
   GamePlayersTable:
     Description: DynamoDB Table to manage Players in a Live Game
-    Value: !Ref GamePlayersTable
+    Value: !Ref GamePlayersTablev2
     Export:
       Name: !Sub "${AWS::StackName}-GamePlayersTable"
   PlayerTable:
@@ -288,7 +285,7 @@ Outputs:
       Name: !Sub "${AWS::StackName}-PlayerWalletTable"
   PlayerInventoryTable:
     Description: DynamoDB Table to manage Player Inventory
-    Value: !Ref PlayerInventoryTable
+    Value: !Ref PlayerInventoryTablev2
     Export:
       Name: !Sub "${AWS::StackName}-PlayerInventoryTable"
   SubscriptionTable:

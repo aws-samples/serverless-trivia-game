@@ -41,6 +41,9 @@
             <v-select label="Quiz Mode" :items="quizModes" v-model='quizMode'/>
         </v-row>
         <v-row>
+            <v-select label="Quiz Category" :items="quizCategories" v-model='quizCategory'/>
+        </v-row>
+        <v-row>
             <v-btn x-large block color="accent" class="white--text" v-on:click='checkinput'>Enter Questions</v-btn>
         </v-row>
     </v-container>
@@ -56,8 +59,10 @@ export default {
         quizDescription: '',
         questionType: '',
         quizMode: '',
+        quizCategory: '',
         questionTypes: ['Multiple Choice', 'Open Answer'],
         quizModes: ['Single Player', 'Multiplayer - Casual', 'Multiplayer - Competitive', 'Multiplayer - Live Scorebard'],
+        quizCategories: ['Books and Music', 'Sciences', 'Sports', 'History', 'TV and Movies', 'Potpourri'],
         error: false,
         errortext: ''
     }},
@@ -75,9 +80,11 @@ export default {
                 this.errortext = 'Please select a quiz mode';
             } else if(this.questionType===''){
                 this.errortext = 'Please select your question type';
+            } else if(this.quizMode==='Single Player' && this.quizCategory===''){
+                this.errortext = 'Please select a game category';
             }
             if(this.errortext==='') {
-                this.$emit("get-questions", this.quizName, this.quizDescription, this.quizNumberOfQuestions, this.questionType, this.quizMode)
+                this.$emit("get-questions", this.quizName, this.quizDescription, this.quizNumberOfQuestions, this.questionType, this.quizMode, this.quizCategory)
             } else {
                 this.error = true;
             }

@@ -23,6 +23,13 @@ export default{
             console.error(JSON.stringify(e));
         }
     },
+    getActiveGameQuery(parms){
+        try{
+            return Api(parms.jwt).get('/activegames?' + parms.queryString + "=" + parms.value);
+        } catch(e) {
+            console.error(JSON.stringify(e));
+        }
+    },
     getMyGameList(parms){
         try{
             return Api(parms.jwt).get(parms.uri);

@@ -1,5 +1,5 @@
 {
-  "Comment": "Player avatar processing StepFunction",
+  "Comment": "Player avatar processing Step Function",
   "StartAt": "Parallel",
   "States": {
     "Parallel": {
@@ -18,7 +18,7 @@
                   "key.$": "$.key",
                   "contentType.$": "$.Content-Type"
                 },
-                "Qualifier": "HTTPLive"
+                "Qualifier": "Live"
               },
               "ResultPath": "$.moderation",
               "ResultSelector": {
@@ -53,7 +53,7 @@
                   "contentType.$": "$.Content-Type",
                   "playerId.$": "$.x-amz-meta-playerid"
                 },
-                "Qualifier": "HTTPLive"
+                "Qualifier": "Live"
               },
               "ResultPath": "$.profile",
               "ResultSelector": {
@@ -92,7 +92,7 @@
                   "bucketName.$": "$.bucketName",
                   "key.$": "$.key"
                 },
-                "Qualifier": "HTTPLive"
+                "Qualifier": "Live"
               },
               "ResultPath": "$.deleteTask",
               "Next": "BundleOutput"

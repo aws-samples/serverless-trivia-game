@@ -376,7 +376,7 @@ export default {
                             this.$store.commit('setBlitzIndividualResult', msg.checked)
                         } 
                         break;
-                    case 'joined':
+                    case 'join':
                         this.$store.commit('setBlitzPlayerCount');
                         break;
                     case 'gameover':
@@ -644,15 +644,13 @@ export default {
         async closemenu(menuitem) {
             this.drawer = false;
             let uimode = '';
-            let results;
             switch(menuitem) {
                 case 'chat':
                     uimode='chat';
                     break;
                 case 'play':
                     this.cleargameinfo();
-                    results = await this.listGames();
-                    this.$store.commit('setGameList', results.data);
+                    this.$store.commit('setGameList', []);
                     this.$store.commit('setGameState', 'showgames');
                     uimode = 'play';
                     break;
@@ -733,10 +731,6 @@ export default {
 
         playerjoined(msg) {
             this.$store.commit('addLiveAdminPlayer', msg.playerName);
-            let data = { subaction: 'status', gameId: this.gameId, 
-                statusType: 'Player Joined', statusContent: msg.PlayerName };
-            let outmsg = {message:'liveadmin', data: data};
-            this.sendmessage(JSON.stringify(outmsg));
         },
 
         playeranswered(msg) {
@@ -748,14 +742,7 @@ export default {
                     break;
                 }
             }
-            this.$store.commit('setLiveAdminPlayersAnswered', this.responses+1 )
-            let data = {}
-            data.subaction = 'status';
-            data.gameId = msg.gameId;
-            data.statusType = 'Player Answered';
-            data.statusContent = msg.playerName;
-            let outmsg = {message: 'liveadmin', data};
-            this.sendmessage(JSON.stringify(outmsg));
+            this.$store.commit('setLiveAdminPlayersAnswered', this.responses+1 );
         },
 
         joinedlive(msg) {
@@ -807,7 +794,7 @@ export default {
             this.$store.commit('setLivePlayerUIMode', '');
             this.$store.commit('setLivePlayerScoreboard', '');
             this.$store.commit('setLivePlayerQuestion', '');
-            this.$store.commit('setGameState', 'list');
+            this.$store.commit('setGameState', '');
             this.$store.commit('setLivePlayerMode', false);
             this.$store.commit('setUIMode','home');
         },
