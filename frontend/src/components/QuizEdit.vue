@@ -199,13 +199,14 @@ export default {
                 }
             } else if(this.questionText===''){
                 this.errortext = 'Please enter question text';
-            } else if((this.answerA==='' || this.answerB ==='') && this.multiplechoice ){
-                this.errortext = 'Multiple Choice Question must have at least A and B answers';
             } else if(this.correctAnswer ===''){
                 this.errortext = 'Please enter/select the correct answer';
             } else if(this.questionGroup<this.lastgroup) {
                 this.errortext = 'Current group cannot be before last group';
             }
+            if((this.answerA==='' || this.answerB ==='') && this.multiplechoice && this.errortext ==='' ){
+                this.errortext = 'Multiple Choice Question must have at least A and B answers';
+            } 
             if(this.errortext === '') {
                 let data = {gameId: this.game.gameId, quizname: this.game.quizName, question: this.questionText,
                     quizMode: this.game.quizMode, questionNumber: this.questionNumber, questionType: this.game.questionType,

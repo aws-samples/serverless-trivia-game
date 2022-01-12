@@ -64,14 +64,173 @@ Resources:
       Parameters:
         ResourceGroupName: !Join ["-", [!Sub "${ResourceGroupPrefix}", "DynamoDB"]] 
 
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: 10.0.0.0/28
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Public Subnet (AZ1)
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: 10.0.0.82/28
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Public Subnet (AZ2)
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Subnet (AZ1)
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Subnet (AZ2)
+
+  NatGatewayAEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGatewayBEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGatewayA:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayAEIP.AllocationId
+      SubnetId: !Ref PublicSubnetA
+
+  NatGatewayB:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayBEIP.AllocationId
+      SubnetId: !Ref PublicSubnetB
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Public Routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetA
+
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetB
+
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Routes (AZ1)
+
+  DefaultPrivateRouteA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayA
+
+  PrivateSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      SubnetId: !Ref PrivateSubnetA
+
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Routes (AZ2)
+
+  DefaultPrivateRouteB:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayB
+
+  PrivateSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      SubnetId: !Ref PrivateSubnetB
+      
   WS:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./websocketstemplate.yaml
       Parameters:
-        ConnectionsTable: !GetAtt DT.Outputs.ConnectionsTable
         GamePlayersTable: !GetAtt DT.Outputs.GamePlayersTable
-        ActiveGamesTable: !GetAtt DT.Outputs.ActiveGamesTable
         PlayerInventoryTable: !GetAtt DT.Outputs.PlayerInventoryTable
         PlayerWalletTable: !GetAtt DT.Outputs.PlayerWalletTable
         HighScoreTable: !GetAtt DT.Outputs.HighScoreTable
@@ -85,13 +244,14 @@ Resources:
         QuizSourceStreamName: !GetAtt Analytics.Outputs.QuizSourceStreamName
         ChatTopicName: !GetAtt SendChatTopic.TopicName
         ChatTopicArn: !Ref SendChatTopic
+        EventBusName: !Ref STSEventBus
 
   HTTP:
     Type: AWS::Serverless::Application
+    DependsOn: VPC
     Properties:
       Location: ./httptemplate.yaml
       Parameters:
-        ActiveGamesTable: !GetAtt DT.Outputs.ActiveGamesTable
         PlayerInventoryTable: !GetAtt DT.Outputs.PlayerInventoryTable
         PlayerWalletTable: !GetAtt DT.Outputs.PlayerWalletTable
         HighScoreTable: !GetAtt DT.Outputs.HighScoreTable
@@ -114,15 +274,20 @@ Resources:
         EMFNamespace: !Sub "${EMFNamespace}"
         PurchaseSourceStreamName: !GetAtt Analytics.Outputs.PurchaseSourceStreamName
         QuizSourceStreamName: !GetAtt Analytics.Outputs.QuizSourceStreamName
+        VpcId: !Ref VPC
+        PrivateSubnetA: !Ref PrivateSubnetA
+        PrivateSubnetB: !Ref PrivateSubnetB
+        EventBusName: !Ref STSEventBus
+        CloudFrontDomain: !GetAtt PlayerAvatarDistribution.DomainName
 
   IOT:
     Type: AWS::Serverless::Application
+    DependsOn: VPC    
     Properties:
       Location: ./iot.yaml
       Parameters:
         PlayerInventoryTable: !GetAtt DT.Outputs.PlayerInventoryTable
         GamesDetailTable: !GetAtt DT.Outputs.GamesDetailTable
-        ActiveGamesTable: !GetAtt DT.Outputs.ActiveGamesTable
         HighScoreTable: !GetAtt DT.Outputs.HighScoreTable
         PlayerProgressTopicName: !GetAtt PlayerProgressTopic.TopicName
         PlayerProgressTopicArn: !Ref PlayerProgressTopic
@@ -132,6 +297,10 @@ Resources:
         IoTEndpoint: !Sub "${IoTEndpoint}"
         ChatTopicName: !GetAtt SendChatTopic.TopicName
         ChatTopicArn: !Ref SendChatTopic
+        PrivateSubnetA: !Ref PrivateSubnetA
+        PrivateSubnetB: !Ref PrivateSubnetB
+        VpcId: !Ref VPC
+        EventBusName: !Ref STSEventBus
         
   Analytics:
     Type: AWS::Serverless::Application
@@ -147,7 +316,7 @@ Resources:
   PlayerProgressPutFunction:
     Type: AWS::Serverless::Function
     Properties:
-      AutoPublishAlias: HTTPLive
+      AutoPublishAlias: Live
       CodeUri: Functions/Main/playerprogression_put/
       MemorySize: 1024
       Environment:
@@ -163,7 +332,9 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref PlayerProgressTopic
-            
+      Tags:
+        Dashboard: GeneralOps
+
   PlayerProgressPutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -189,6 +360,8 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref LeaderboardTopic
+      Tags:
+        Dashboard: GeneralOps
 
   ScorePutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -215,6 +388,8 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref PlayerWalletTopic
+      Tags:
+        Dashboard: GeneralOps
 
   MoneyAdjustFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -240,6 +415,8 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref SendChatTopic
+      Tags:
+        Dashboard: GeneralOps
 
   SendChatFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -275,7 +452,7 @@ Resources:
   WebpushVapidGenerateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      AutoPublishAlias: HTTPLive
+      AutoPublishAlias: Live
       CodeUri: Functions/Main/webpush_vapid_generate/
       MemorySize: 512
       Environment:
@@ -316,7 +493,7 @@ Resources:
   WebpushNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      AutoPublishAlias: HTTPLive
+      AutoPublishAlias: Live
       CodeUri: Functions/Main/webpush_notification_send/
       MemorySize: 512
       Environment:
@@ -341,6 +518,9 @@ Resources:
               detail-type:
                 - "Avatar Processing Completed"
                 - "Avatar Processing Failed"
+      Tags:
+        Dashboard: GeneralOps
+
   WebpushNotificationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -350,13 +530,16 @@ Resources:
   PlayerAvatarThumbnailFunction:
     Type: AWS::Serverless::Function
     Properties:
-      AutoPublishAlias: HTTPLive
+      AutoPublishAlias: Live
       CodeUri: Functions/Main/playeravatar_thumbnail/
       MemorySize: 1024
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref PlayerAvatarBucket
         - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: GeneralOps
+
   PlayerAvatarThumbnailLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -381,8 +564,7 @@ Resources:
             ConnectionTimeout: 10
         Comment: 'SimpletriviaService: CloudFront Distribution for player avatars'
         DefaultCacheBehavior: 
-          ForwardedValues: 
-            QueryString: false
+          CachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad'
           TargetOriginId: 'S3PlayerAvatarOrigin'
           ViewerProtocolPolicy: https-only
         Enabled: true
@@ -551,7 +733,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
-      LogGroupName: !Sub "/qwizardly/statemachines/playeravatar-${AWS::StackName}"
+      LogGroupName: !Sub "/sts/statemachines/playeravatar-${AWS::StackName}"
   
   PlayerProgressTopic:
     Type: AWS::SNS::Topic

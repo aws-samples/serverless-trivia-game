@@ -27,11 +27,11 @@ const ddb = new AWS.DynamoDB.DocumentClient();
 const questionsTableName = process.env.GAMES_DETAIL_TABLE_NAME;
 const playerInventoryTableName = process.env.PLAYER_INVENTORY_TABLE_NAME;
 
-async function getGame(gameId, playerName) {
+async function getGame(sk, pk) {
   let gameInfo = {};
   const game = {};
   let gameHeader = {};
-  const Key = { playerName, gameId };
+  const Key = { pk, sk };
   try {
     gameHeader = await ddb.get({
       TableName: playerInventoryTableName,
@@ -44,7 +44,7 @@ async function getGame(gameId, playerName) {
   }
   const queryparms = {
     TableName: questionsTableName,
-    ExpressionAttributeValues: { ':v1': gameId },
+    ExpressionAttributeValues: { ':v1': sk },
     ExpressionAttributeNames: { '#key': 'gameId' },
     KeyConditionExpression: '#key = :v1',
   };
@@ -55,7 +55,7 @@ async function getGame(gameId, playerName) {
     console.error(`could not get game info ${JSON.stringify(e.stack)}`);
     return { statusCode: 500, body: 'Could not retrieve questions' };
   }
-  game.gameId = gameId;
+  game.gameId = sk;
   game.questions = gameInfo.Items;
   game.quizMode = gameHeader.Item.quizMode;
   game.questionType = gameHeader.Item.questionType;

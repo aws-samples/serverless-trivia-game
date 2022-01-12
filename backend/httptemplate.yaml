@@ -17,9 +17,6 @@ Globals:
       - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
 
 Parameters:
-  ActiveGamesTable:
-    Type: String
-    Description: Current active / hosted games table
   PlayerInventoryTable:
     Type: String
     Description: Player inventory table
@@ -86,6 +83,21 @@ Parameters:
   QuizSourceStreamName:
     Type: String
     Description: Stream for results
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VpcId for the game
+  PrivateSubnetA:
+    Type: String
+    Description: Private Subnet A
+  PrivateSubnetB:
+    Type: String
+    Description: Private Subnet B
+  EventBusName:
+    Type: String
+    Description: Name of the EventBus
+  CloudFrontDomain:
+    Type: String
+    Description: Domain for avatar retrieval
 
 Resources:
   ResourceGroup:
@@ -128,6 +140,9 @@ Resources:
               Authorizer: HTTPAuthorizer
             Method: GET
             Path: /players/{playerId}/games
+      Tags:
+        Dashboard: HTTPHost
+
   MyGamesListFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -157,6 +172,9 @@ Resources:
               Authorizer: HTTPAuthorizer
             Method: GET
             Path: /players/{playerId}
+      Tags:
+        Dashboard: HTTPPlayer
+
   PlayerGetFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -189,6 +207,9 @@ Resources:
               Authorizer: HTTPAuthorizer
             Method: PUT
             Path: /players/{playerId}
+      Tags:
+        Dashboard: HTTPPlayer
+
   PlayerPutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -218,6 +239,9 @@ Resources:
               Authorizer: HTTPAuthorizer
             Method: POST
             Path: /players/{playerId}/subscriptions
+      Tags:
+        Dashboard: HTTPPlayer
+
   WebpushSubscriptionPutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -247,6 +271,9 @@ Resources:
               Authorizer: HTTPAuthorizer
             Method: GET
             Path: /players/{playerId}/progress
+      Tags:
+        Dashboard: HTTPPlayer
+
   PlayerProgressGetFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -279,6 +306,9 @@ Resources:
               Authorizer: HTTPAuthorizer
             Method: GET
             Path: /players/{playerId}/games/{gameId}
+      Tags:
+        Dashboard: HTTP
+
   GameGetFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -294,13 +324,11 @@ Resources:
       Environment:
         Variables:
           SCOREBOARD_TABLE_NAME: !Sub "${HighScoreTable}"
-          PLAYER_TABLE_NAME: !Sub "${PlayerTable}"
+          CLOUDFRONT_DOMAIN: !Sub "${CloudFrontDomain}"
           REGION: !Sub "${AWS::Region}"
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Sub "${HighScoreTable}"
-        - DynamoDBReadPolicy:
-            TableName: !Sub "${PlayerTable}"
         - CloudWatchLambdaInsightsExecutionRolePolicy
       Events:
         HttpApiEvent:
@@ -319,6 +347,9 @@ Resources:
             Path: /games/{gameId}/scoreboard/{playerId}
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTP
+
   LeaderboardGetFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -348,6 +379,9 @@ Resources:
             Path: /games/{gameId}/questions/{questionNumber}
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTPAdmin
+
   QuestionPutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -377,6 +411,9 @@ Resources:
             Path: /games
             Auth:
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTPAdmin
+
   GameHeaderPutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -393,12 +430,12 @@ Resources:
         - !Ref UtilsLayer
       Environment:
         Variables:
-          GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
+          PLAYER_INVENTORY_TABLE_NAME: !Sub "${PlayerInventoryTable}"
           QUESTIONS_TABLE_NAME: !Sub "${GamesDetailTable}"
           REGION: !Sub "${AWS::Region}"
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Sub "${ActiveGamesTable}"
+            TableName: !Sub "${PlayerInventoryTable}"
         - DynamoDBReadPolicy:
             TableName: !Sub "${GamesDetailTable}"
         - CloudWatchLambdaInsightsExecutionRolePolicy
@@ -411,12 +448,110 @@ Resources:
             Path: /games/{gameId}/{playerId}
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTP
+
   GamePlayFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref GamePlayFunction]]
 
+  ActiveGameSubnetGroup:
+    Type: AWS::DAX::SubnetGroup
+    Properties:
+      Description: Subnet group for DAX
+      SubnetGroupName: ActiveGamesGroup
+      SubnetIds: 
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+
+  HTTPLambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTP Lambda Security Group
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VpcId
+
+  DAXRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+              - dax.amazonaws.com
+              - lambda.amazonaws.com              
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+         - !Ref DAXManagedPolicy
+
+  DAXManagedPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-DAXManagedRole" ] ]      
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Resource: '*'
+          Action:
+          - 'dax:PutItem'
+          - 'dax:GetItem'
+          - 'dax:Query'
+          - 'dax:DeleteItem'
+          - 'dax:UpdateItem'
+          - 'dynamodb:DescribeTable'
+          - 'dynamodb:GetItem'
+          - 'dynamodb:PutItem'
+          - 'dynamodb:UpdateItem'
+          - 'dynamodb:Query'
+          - 'dynamodb:DeleteItem'
+
+  DAXSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for DAX
+      GroupName: DAXActiveGames
+      VpcId: !Ref VpcId
+
+  DAXSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt DAXSecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: 8111
+      ToPort: 8111
+      SourceSecurityGroupId: !GetAtt HTTPLambdaSecurityGroup.GroupId
+
+  DAXCluster:
+    Type: AWS::DAX::Cluster
+    Properties:
+      ClusterName: simpleTriviaService
+      Description: Cluster for simpleTriviaService
+      IAMRoleARN: !GetAtt DAXRole.Arn
+      NodeType: dax.r5.large
+      ReplicationFactor: 2
+      SecurityGroupIds:
+        - !GetAtt DAXSecurityGroup.GroupId
+      SubnetGroupName: !Ref ActiveGameSubnetGroup
+      ParameterGroupName: !Ref DAXParams
+      
+  DAXParams:
+    Type: AWS::DAX::ParameterGroup
+    Properties:
+      Description: Params for Simple Trivia Service
+      ParameterNameValues:
+         "query-ttl-millis" : "5000"
+         "record-ttl-millis" : "10000"      
   ActiveGamesListFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -427,11 +562,13 @@ Resources:
         - !Ref UtilsLayer
       Environment:
         Variables:
-          GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
+          PLAYER_INVENTORY_TABLE_NAME: !Sub "${PlayerInventoryTable}"
+          DAX_ENDPOINT: !GetAtt DAXCluster.ClusterDiscoveryEndpoint
           REGION: !Sub "${AWS::Region}"
+      Role: !GetAtt DAXRole.Arn
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Sub "${ActiveGamesTable}"
+            TableName: !Sub "${PlayerInventoryTable}"
         - CloudWatchLambdaInsightsExecutionRolePolicy
       Events:
         HttpApiEvent: 
@@ -442,11 +579,110 @@ Resources:
             Path: /activegames
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTP
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt HTTPLambdaSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+
   ActiveGamesListFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref ActiveGamesListFunction]]
+
+  ActiveGamesDeleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/activegames_delete/
+      MemorySize: 1536
+      Layers:
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME: !Sub "${PlayerInventoryTable}"
+          DAX_ENDPOINT: !GetAtt DAXCluster.ClusterDiscoveryEndpoint
+          REGION: !Sub "${AWS::Region}"
+      Role: !GetAtt DAXRole.Arn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${PlayerInventoryTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        DeleteGameEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              detail-type:
+                - "Websockets.game_end"
+                - "IoT.game_end"
+            RetryPolicy:
+              MaximumRetryAttempts: 5
+              MaximumEventAgeInSeconds: 60
+            EventBusName: !Sub "${EventBusName}"
+      Tags:
+        Dashboard: HTTP
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt HTTPLambdaSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+
+  ActiveGamesDeleteFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref ActiveGamesDeleteFunction]]
+
+  GameHostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: Functions/HTTP/game_host/
+      MemorySize: 1536
+      Layers:
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME: !Sub "${PlayerInventoryTable}"
+          DAX_ENDPOINT: !GetAtt DAXCluster.ClusterDiscoveryEndpoint
+          REGION: !Sub "${AWS::Region}"
+      Role: !GetAtt DAXRole.Arn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub "${PlayerInventoryTable}"
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        DeleteGameEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              detail-type:
+                - "Websockets.game_host"
+                - "IoT.game_host"
+            RetryPolicy:
+              MaximumRetryAttempts: 5
+              MaximumEventAgeInSeconds: 60
+            EventBusName: !Sub "${EventBusName}"
+      Tags:
+        Dashboard: HTTP
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt HTTPLambdaSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+
+  GameHostFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameHostFunction]]
 
   GameAnswerFunction:
     Type: AWS::Serverless::Function
@@ -481,6 +717,9 @@ Resources:
             Path: /games/{gameId}/answer
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTP
+
   GameAnswerFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -495,11 +734,11 @@ Resources:
       MemorySize: 1024
       Environment:
         Variables:
-          GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
+          PLAYER_INVENTORY_TABLE_NAME: !Sub "${PlayerInventoryTable}"
           REGION: !Sub "${AWS::Region}"
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Sub "${ActiveGamesTable}"
+            TableName: !Sub "${PlayerInventoryTable}"
         - CloudWatchLambdaInsightsExecutionRolePolicy
       Events:
         HttpApiEvent:
@@ -510,6 +749,9 @@ Resources:
             Path: /activegames/{gameId}
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTP
+
   GameActivateFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -539,6 +781,9 @@ Resources:
             Path: /players/{playerId}/wallet
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTPPlayer
+
   PlayerWalletAddFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -568,6 +813,9 @@ Resources:
             Path: /players/{playerId}/wallet
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTPPlayer
+
   PlayerWalletGetFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -600,6 +848,9 @@ Resources:
             Path: /players/{playerId}/games/{gameId}
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: Marketplace
+
   GameListOnMarketPlaceLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -631,6 +882,9 @@ Resources:
             Path: /marketplace
             Auth: 
               Authorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: Marketplace
+
   MarketplaceGetFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -651,6 +905,9 @@ Resources:
         - KinesisCrudPolicy:
             StreamName: !Sub "${PurchaseSourceStreamName}"
         - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: Marketplace
+
   WritePurchasedToKinesisFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -708,46 +965,54 @@ Resources:
           REGION: !Sub ${AWS::Region}
       Policies:
         - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: Marketplace
+
   GamePurchaseTransformLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref GamePurchaseTransformFunction]]
 
+  PurchaseGameStateMachineIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationSubtype: StepFunctions-StartSyncExecution
+      PayloadFormatVersion: 1.0
+      CredentialsArn: !GetAtt HttpApiRole.Arn
+      RequestParameters:
+        Input: "$request.body"
+        StateMachineArn: !Ref PurchaseGameStateMachine
+  
+  PurchaseGameStateMachineRoute:
+    Type: AWS::ApiGatewayV2::Route
+    DependsOn:
+      - PurchaseGameStateMachineIntegration
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "POST /marketplace"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref HTTPAuthorizerSM
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref PurchaseGameStateMachineIntegration
+        
   HttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      DefinitionBody:
-        openapi: "3.0.1"
-        info:
-          title: !Sub "HTTP-${AWS::StackName}" 
-          version: "2020-11-06 15:32:29UTC"
-        paths:
-          "/marketplace":
-            post:
-              responses:
-                default:
-                  description: "Default response for POST /"
-              x-amazon-apigateway-integration:
-                integrationSubtype: "StepFunctions-StartSyncExecution"
-                requestParameters:
-                  Input: "$request.body"
-                  StateMachineArn: 
-                    Fn::GetAtt: [PurchaseGameStateMachine, Arn] 
-                payloadFormatVersion: "1.0"
-                type: "aws_proxy"
-                connectionType: "INTERNET"
-        x-amazon-apigateway-cors:
-          allowMethods:
-          - "*"
-          maxAge: 600
-          allowCredentials: true
-          allowOrigins:
-          - "http://*" 
-          - "https://*"
-          allowHeaders:
-          - "*"
-        x-amazon-apigateway-importexport-version: "1.0"
+      CorsConfiguration:
+          AllowCredentials: Boolean
+          AllowHeaders:
+            - "*"
+          AllowMethods:
+            - "*"
+          AllowOrigins: 
+            - "http://*"
+            - "https://*"
+          MaxAge: 600
       Auth: 
         Authorizers:
           HTTPAuthorizer:
@@ -757,6 +1022,22 @@ Resources:
                 - !Sub "${AppClientID}"
             IdentitySource: "$request.header.Authorization"
         DefaultAuthorizer: HTTPAuthorizer
+      Tags:
+        Dashboard: HTTP
+
+  HTTPAuthorizerSM:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties: 
+      ApiId: !Ref HttpApi
+      AuthorizerResultTtlInSeconds: 0
+      AuthorizerType: JWT
+      IdentitySource:
+        - "$request.header.Authorization"
+      JwtConfiguration: 
+        Issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolID}"
+        Audience:
+          - !Sub "${AppClientID}"
+      Name: HTTPAuthorizerSM
 
   HttpApiRole:
     Type: 'AWS::IAM::Role'

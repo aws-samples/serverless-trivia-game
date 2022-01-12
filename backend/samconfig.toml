@@ -5,3 +5,5 @@ version = 0.1
 stack_name = "sts"
 s3_prefix = "sts"
 capabilities = "CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND"
+parameter_overrides = ""
+image_repositories = []

@@ -58,6 +58,7 @@ async function getQuestionNumber(key) {
         if (value) {
           resolve(parseInt(value, 10));
         } else {
+          console.error(`error checking value ${JSON.stringify(err)}`);
           reject(err);
         }
       } else {
@@ -100,13 +101,14 @@ async function scoreResponse(key, gameInfo, questionNumber) {
     redisClient.hget(key, questionKey, async (err, value) => {
       if (err) {
         reject(err);
+        return;
       }
       const question = JSON.parse(value);
       let followUp = '';
-      if(question.hasOwnProperty('answerFollowup')) {
+      if(Object.prototype.hasOwnProperty.call(question, 'answerFollowup')) {
         followUp = question.answerFollowup;
       }
-      if(question.hasOwnProperty('answerA')) {
+      if(Object.prototype.hasOwnProperty.call(question, 'answerA')) {
         switch(question.correctAnswer) {
           case 'A':
             correctAnswerString = `${question.correctAnswer} - ${question.answerA}`;
@@ -134,7 +136,7 @@ async function scoreResponse(key, gameInfo, questionNumber) {
           resolve({ score: 0, message: { text: 'Correct answer, but not first', correctAnswer: correctAnswerString, followUp }});
         }
       } else {
-        if (Object.hasOwnProperty(question, 'alternatives')) {
+        if (Object.prototype.hasOwnProperty.call(question, 'alternatives')) {
           for(let j=0; j<question.alternatives.length; j++) {
             if(question.alternatives[j].toLowerCase()===gameInfo.playerAnswer.toLowerCase()) {
                 let first = await saveResponse(key, gameInfo, questionNumber);
@@ -165,7 +167,7 @@ async function sendToKinesis(gameInfo, resp) {
       quizMode: 'Multiplayer - Live Scoreboard', dateOfQuiz: dateString(),
       questions});
   let streamResp = await kinesis.putRecord({Data, StreamName: scoreStream, PartitionKey: 'score001'}).promise();
-  if(!streamResp.hasOwnProperty(('ShardId'))) {
+  if(!Object.prototype.hasOwnProperty.call(streamResp, 'ShardId')) {
     console.error(`error writing to stream ${JSON.stringify(streamResp)}`);
     return { statusCode: 500, body: { error: 'Could not send score events' } };
   } else {
@@ -178,7 +180,7 @@ async function sendIoTMessage(params) {
     await iotdata.publish(params).promise();
     return true;
   } catch (e) {
-    console.error(e);
+    console.error(`error sending to iot ${JSON.stringify(e)} - ${JSON.stringify(params)}`);
     return false;
   }
 }
@@ -189,6 +191,7 @@ async function getScoreboard(key) {
       if (err) {
         console.error(JSON.stringify(err));
         reject(err);
+        return;
       }
       const data = [];
       value.map((result, index) => {
@@ -217,6 +220,10 @@ async function sendScoreboard(resp, key) {
 async function handleAnswer(gameInfo) {
   const key = `${gameInfo.gameId}:${gameInfo.playerName}`;
   const questionNumber = await getQuestionNumber(key, gameInfo);
+  if (isNaN(questionNumber)) {
+    //error getting question number
+    return {statusCode: 200, body: JSON.stringify(questionNumber) };
+  }
   if (questionNumber === gameInfo.questionNumber) {
     const resp = await scoreResponse(key, gameInfo, questionNumber);
     const topic = `games/${key}/results/${gameInfo.respondingPlayerName}`;
@@ -229,8 +236,9 @@ async function handleAnswer(gameInfo) {
     await sendIoTMessage(params);
     await sendScoreboard(resp, key);
     return { statusCode: 200, body: JSON.stringify({ status: resp.message.text }) };
+  } else {
+    return { statusCode: 200, body: JSON.stringify({ err: 'wrong question answered' }) };
   }
-  return { statusCode: 400, body: JSON.stringify({ err: 'wrong question answered' }) };
 }
 
 exports.handler = async function (event) {

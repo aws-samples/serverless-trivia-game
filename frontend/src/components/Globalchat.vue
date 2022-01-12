@@ -14,7 +14,7 @@
 */
 <template>
     <div>
-        <v-textarea outline v-model="data" placeholder="" :readonly="readonly"></v-textarea>
+        <v-textarea outline v-model="model_data" placeholder="" :readonly="readonly"></v-textarea>
     </div>
 </template>
 
@@ -22,7 +22,8 @@
 export default {
     name: 'GlobalChat',
     data: function() { return {
-        readonly: true
+        readonly: true,
+        model_data: this.data
     }},
     props: {
             data: Array

@@ -2,6 +2,9 @@ module.exports = {
   "transpileDependencies": [
     "vuetify"
   ],
+  devServer: {
+    disableHostCheck: true
+  },
   pwa: {
     workboxPluginMode: "InjectManifest",
     workboxOptions: {

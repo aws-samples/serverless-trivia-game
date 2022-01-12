@@ -132,7 +132,8 @@
       "Type": "Pass",
       "End": true,
       "Result": {
-        "statusCode": 500,
+        "statusCode": 200,
+        "Access-Control-Allow-Origin": '*',
         "body": {
           "message": "Cannot purchase your own items"
         }
@@ -195,6 +196,12 @@
               "Parameters": {
                 "TableName": "${PlayerInventoryTable}",
                 "Item": {
+                  "pk": {
+                    "S.$": "$.playerId"
+                  },
+                  "sk": {
+                    "S.$": "$.gameId"
+                  },
                   "playerName": {
                     "S.$": "$.playerId"
                   },
@@ -257,7 +264,8 @@
     "NotEnoughFunds": {
       "Type": "Pass",
       "Result": {
-        "statusCode": 500,
+        "statusCode": 200,
+        "Access-Control-Allow-Origin": '*',
         "body": {
           "message": "Not enough funds in wallet"
         }
@@ -267,7 +275,8 @@
     "GameSold": {
       "Type": "Pass",
       "Result": {
-        "statusCode": 500,
+        "statusCode": 200,
+        "Access-Control-Allow-Origin": '*',
         "body": {
           "message": "Game sold on marketplace already"
         }
@@ -277,7 +286,8 @@
     "MissingInput": {
       "Type": "Pass",
       "Result": {
-        "statusCode": 500,
+        "statusCode": 200,
+        "Access-Control-Allow-Origin": '*',
         "body": {
           "message": "Missing input from API"
         }
@@ -301,6 +311,7 @@
       "Type": "Pass",
       "Result": {
         "statusCode": 200,
+        "Access-Control-Allow-Origin": '*',
         "body": {
           "message": "Game successfully purchased"
         }

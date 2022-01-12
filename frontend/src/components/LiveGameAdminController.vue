@@ -168,7 +168,7 @@ export default {
             let scoreboard = this.buildscoreboard(this.groupquestions);
             let msg = { message: 'liveadmin', data: {
                 subaction: 'startgame', quizName: this.quizname, gameId: this.gameid,
-                scoreboard: scoreboard.data.scoreboard
+                scoreboard: scoreboard.data.scoreboard, playerName: this.username
             }};
             if(this.gametype==='Multiplayer - Competitive') {
                 this.currentgroup = 1;
@@ -188,6 +188,7 @@ export default {
                             //build question
                             msg.data=this.buildquestion(this.questionnumberindex, false);
                             msg.data.subaction='question';
+                            msg.data.playerName = this.username;
                             //change the text for the button and set new mode
                             this.step = 'Show Scoreboard';
                             this.stepmode = 'scoreboard';
@@ -242,6 +243,7 @@ export default {
                             }
                             msg.data = this.buildquestion(this.questionnumberindex, false);
                             msg.data.subaction='question';
+                            msg.data.playerName=this.username;
                             if(this.questionnumber < this.questions && this.questionlist[this.questionnumber].questionGroup===this.currentgroup) {
                                 //next step = question
                                 this.step = 'Ask Question ' + String(this.questionnumber + 1);
@@ -414,7 +416,7 @@ export default {
                 } else {
                     wins = 0;
                 }
-                xpmessage.data = {subaction: 'progress', progress: {
+                xpmessage.data = {subaction: 'progress', playerName: this.username, progress: {
                     playerid: this.players[i].playerName, experience: this.players[i].score,
                     wins: wins, owner: this.username}};
                 this.$emit('send-message', JSON.stringify(xpmessage));
@@ -430,6 +432,7 @@ export default {
                 let scoreboardmsg = {};
                 scoreboardmsg.message = 'liveadmin';
                 scoreboardmsg.data = {};
+                scoreboardmsg.data.playerName = this.username;
                 scoreboardmsg.data.subaction = 'scoreboardupdate';
                 scoreboardmsg.data.item = {};
                 scoreboardmsg.data.item.gameId = this.gameid;
@@ -448,6 +451,7 @@ export default {
             data.subaction='scoreboard';
             data.gameId=this.gameid; 
             data.gametype=this.gametype;
+            data.playerName=this.username;
             data.note='noquestionfinal';
             this.players.forEach(player => {
                 let playerData = {};
@@ -513,7 +517,7 @@ export default {
                     playerResponse: this.players[i].answers[index], correctResponse: correctResponse }];
                 let analytics = { playerName:this.players[i].playerName, gameId: this.gameid, 
                     quizMode: this.gametype, dateOfGame: this.dateString(), questions: questions};
-                let analyticsmessage = {message: 'liveadmin', data: {subaction:'analytics', analytics : analytics}};
+                let analyticsmessage = {message: 'liveadmin', data: {playerName: this.username, subaction:'analytics', analytics : analytics}};
                 this.$emit('send-message', JSON.stringify(analyticsmessage));
                 this.$store.commit('setLiveAdminPlayerScore', msg);
             }
@@ -531,6 +535,7 @@ export default {
             } else {
                 msg.data.note = 'question';
             }
+            msg.data.playerName=this.username;
             msg.data.gameId=this.gameid; 
             this.players.forEach(player => {
                 let playerData = {}

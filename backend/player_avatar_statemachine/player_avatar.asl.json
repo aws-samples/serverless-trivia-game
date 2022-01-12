@@ -1,5 +1,5 @@
 {
-  "Comment": "Player avatar processing StepFunction",
+  "Comment": "Player avatar processing Step Function",
   "StartAt": "Parallel",
   "States": {
     "Parallel": {
@@ -48,7 +48,7 @@
                   "contentType.$": "$.Content-Type",
                   "playerId.$": "$.x-amz-meta-playerid"
                 },
-                "Qualifier": "HTTPLive"
+                "Qualifier": "Live"
               },
               "Retry": [
                 {

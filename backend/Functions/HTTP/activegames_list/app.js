@@ -19,32 +19,63 @@
 /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
 
 const AWS = require('aws-sdk');
+const AmazonDaxClient = require('amazon-dax-client')
 const { Unit } = require('aws-embedded-metrics');
 const { logMetricEMF } = require('/opt/logger');
 
 AWS.config.apiVersions = { dynamodb: '2012-08-10' };
 AWS.config.update = ({ region: process.env.REGION });
 
-const ddb = new AWS.DynamoDB.DocumentClient();
-const gamesTableName = process.env.GAMES_TABLE_NAME;
 
-async function getActiveGames() {
-  const gameData = await ddb.scan({
-    TableName: gamesTableName,
-    ProjectionExpression:
-    'gameId, playerName, quizName, quizDescription, quizMode, questionType',
-  }).promise();
-  let games;
-  if (Object.prototype.hasOwnProperty.call(gameData, 'Items')) {
-    games = gameData.Items;
-  } else {
-    games = 'No current games hosted';
+const playerInventoryTableName = process.env.PLAYER_INVENTORY_TABLE_NAME;
+const daxEndpoint = process.env.DAX_ENDPOINT;
+
+const dax = new AmazonDaxClient({endpoints: daxEndpoint, region: process.env.REGION});
+const ddb = new AWS.DynamoDB.DocumentClient({service: dax });
+
+async function getActiveGames(event) {
+  if(event.rawQueryString === '') {
+    return { statusCode: 200, body: 'No parameters provided' };
   }
-  await logMetricEMF('GamesListed', Unit.Count, 1, { service: 'activegames_list', operation: 'getActiveGames' });
-  return { statusCode: 200, body: JSON.stringify(games) };
+  if(event['rawQueryString'].indexOf('host')!==-1) {
+    const gameType = 'LIVE='+event['queryStringParameters']['host'];
+    //perform the query on the GSI for the record and return it
+    try {
+      const parms = {TableName: playerInventoryTableName,
+        IndexName: 'gsi-GameType',
+        KeyConditionExpression: 'gameType = :gameType',
+        ExpressionAttributeValues: {':gameType': gameType }
+      };
+      const result = await ddb.query(parms).promise();
+      const games = result.Items;
+      return { statusCode: 200, body: JSON.stringify(games) };
+    } catch(e) {
+      console.error(`error getting live game ${e}`);
+      return { statusCode: 500, body: 'Could not retrieve game' };
+    }
+  }
+  if(event['rawQueryString'].indexOf('category')!==-1) {
+    const gameType = 'SINGLE='+event['queryStringParameters']['category'];
+    //perform the query on the GSI for the record and return it
+    try {
+      const parms = {TableName: playerInventoryTableName,
+        IndexName: 'gsi-GameType',
+        KeyConditionExpression: 'gameType = :gameType',
+        ExpressionAttributeValues: {':gameType': gameType }
+      };
+      const result = await ddb.query(parms).promise();
+      const games = result.Items;
+      return { statusCode: 200, body: JSON.stringify(games) };
+    } catch(e) {
+      console.error(`error getting live game ${e}`);
+      return { statusCode: 500, body: 'Could not retrieve game' };
+    }
+  }
+  //fallthrough
+  return { statusCode: 200, body: 'Please include proper query parameters' };
 }
 
-exports.handler = async () => {
-  const retVal = await getActiveGames();
+exports.handler = async (event) => {
+  const retVal = await getActiveGames(event);
   return retVal;
 };

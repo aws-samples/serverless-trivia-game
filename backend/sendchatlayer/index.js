@@ -28,7 +28,6 @@ AWS.config.apiVersions = { dynamodb: '2012-08-10' };
 AWS.config.update = ({ region: process.env.REGION });
 
 const ddb = new AWS.DynamoDB.DocumentClient();
-const connectionTableName = process.env.CONNECTIONS_TABLE_NAME;
 const playersTableName = process.env.PLAYERS_TABLE_NAME;
 
 async function sendData(msgcontent, connectionData, domain, tablename, stage) {
@@ -48,12 +47,7 @@ async function sendData(msgcontent, connectionData, domain, tablename, stage) {
         { ConnectionId: connectionId, Data: JSON.stringify(msgcontent) },
       ).promise();
     } catch (e) {
-      if (e.statusCode === 410) {
-        console.warn(`Found stale connection, deleting ${connectionId}`);
-        if (tablename === connectionTableName) {
-          await ddb.delete({ TableName: tablename, Key: { connectionId } }).promise();
-        }
-      } else {
+      if (e.statusCode !== 410) {
         console.error(`Error with websocket connections ${JSON.stringify(e)} using ${JSON.stringify(props)}`);
         return { statusCode: 500, body: 'error with websocket connections' };
       }
@@ -103,24 +97,17 @@ async function getData(msg) {
 
   switch (msg.action) {
     case 'chat':
-      try {
-        connectionData = await ddb.scan({
-          TableName: connectionTableName,
-          ProjectionExpression: 'connectionId',
-        }).promise();
-      } catch (e) {
-        console.error(`Error getting chat connection data ${JSON.stringify(e)}`);
-        return { statusCode: 500, body: 'Error getting chat connection data' };
-      }
+      //deprecated
       break;
     case 'liveadmin':
       // send the received question to all in the gametable
+      const lapk = msg.gameId +'#'+msg.playerName;
       parms = {
         TableName: playersTableName,
-        KeyConditionExpression: '#f1 = :v1 and #f2 = :v2',
-        ExpressionAttributeValues: { ':v1': msg.gameId, ':v2': 'PLAYER' },
-        ExpressionAttributeNames: { '#f1': 'gameId', '#f2': 'role' },
-        IndexName: 'GameRole',
+        ProjectionExpression: 'connectionId',        
+        KeyConditionExpression: '#f1 = :v1 and begins_with(#f2, :v2)',
+        ExpressionAttributeValues: { ':v1': lapk, ':v2': 'PLAYER' },
+        ExpressionAttributeNames: { '#f1': 'pk', '#f2': 'sk' },
         ConsistentRead: true,
       };
       try {
@@ -132,13 +119,13 @@ async function getData(msg) {
       break;
     case 'liveplayer':
       // send only to host
+      const lppk = msg.gameId + '#' + msg.hostname;
       parms = {
         TableName: playersTableName,
         ProjectionExpression: 'connectionId',
-        KeyConditionExpression: '#f1 = :v1 and #f2 = :v2',
-        ExpressionAttributeValues: { ':v1': msg.gameId, ':v2': 'HOST' },
-        ExpressionAttributeNames: { '#f1': 'gameId', '#f2': 'role' },
-        IndexName: 'GameRole',
+        KeyConditionExpression: '#f1 = :v1 and begins_with(#f2, :v2)',
+        ExpressionAttributeValues: { ':v1': lppk, ':v2': 'HOST' },
+        ExpressionAttributeNames: { '#f1': 'pk', '#f2': 'sk' },
         ConsistentRead: true,
       };
       try {

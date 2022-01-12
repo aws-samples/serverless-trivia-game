@@ -25,22 +25,22 @@
 const AWS = require('aws-sdk');
 const WSSend = require('/opt/index.js');
 
-AWS.config.apiVersions = { dynamodb: '2012-08-10', sns: '2010-03-31', kinesis: '2013-12-02' };
+AWS.config.apiVersions = { dynamodb: '2012-08-10', sns: '2010-03-31', kinesis: '2013-12-02', eventbridge: '2015-10-07' };
 AWS.config.update = ({ region: process.env.REGION });
 
 const ddb = new AWS.DynamoDB.DocumentClient();
 const sns = new AWS.SNS();
 const kinesis = new AWS.Kinesis();
+const eb = new AWS.EventBridge();
 
-// const topicarn = process.env.SEND_CHAT_TOPIC_ARN;
 const playerProgressTopic = process.env.PLAYER_PROGRESS_TOPIC;
 const highscoreTableName = process.env.SCORES_TABLE_NAME;
-const gamesTableName = process.env.GAMES_TABLE_NAME;
 const playerInventoryTableName = process.env.PLAYER_INVENTORY_TABLE_NAME;
 const playersTableName = process.env.PLAYERS_TABLE_NAME;
 const questionsTableName = process.env.GAMES_DETAIL_TABLE_NAME;
 const scoreStream = process.env.RESPONSE_STREAM;
 const chatTopicArn = process.env.CHAT_TOPIC_ARN;
+const eventBusName = process.env.EVENT_BUS_NAME;
 
 function dateString() {
   const date = new Date();
@@ -54,49 +54,50 @@ function dateString() {
   return dateStr;
 }
 
-async function deleteItem(Table, Key) {
-  const params = {
-    TableName: Table,
-    Key,
-  };
+async function UpdatePlayerInventory(gameInfo) {
   try {
-    await ddb.delete(params).promise();
-  } catch (err) {
-    console.error(`Delete ERROR ${JSON.stringify(params)}`);
-    return err;
-  }
-  return 1;
-}
-
-async function hostGame(gameInfo, connectionId, domainName, stage) {
-  // store the game to be hosted
-  const parms = {};
-  delete gameInfo.subaction; //
-  gameInfo.hostConnection = connectionId;
-  parms.Item = gameInfo;
-  parms.TableName = gamesTableName;
-  const returnMessage = {};
-  try {
-    await ddb.put(parms).promise();
+    const gameId = gameInfo.gameId;
+    const gameType = 'LIVE=' + gameInfo.playerName;
+    const starttime = gameInfo.starttime;
+    const host = gameInfo.playerName;
+    const event = { Entries: [{
+      DetailType: "Websockets.game_host"  ,
+      Source: 'sts',
+      Detail: JSON.stringify({gameId, host, gameType, starttime}),
+      EventBusName: eventBusName
+    }]};
+    await eb.putEvents(event).promise();
+    
   } catch (e) {
     console.error(`could not store game: ${e}`);
     return { statusCode: 500, body: JSON.stringify({ data: e.stack }) };
   }
+}
+
+async function AddHostConnection(gameInfo, connectionId) {
   const item = {};
-  item.gameId = gameInfo.gameId;
+  //changes for new table
+  let parms = {};
+  item.pk = gameInfo.gameId + "#" + gameInfo.playerName;
+  item.sk = 'HOST=' + connectionId;
   item.connectionId = connectionId;
-  item.role = 'HOST';
-  item.userName = gameInfo.playerName;
+  item.playerName = gameInfo.playerName;
+  item.gameId = gameInfo.gameId;
   parms.Item = item;
   parms.TableName = playersTableName;
   try {
     await ddb.put(parms).promise();
+    return;
   } catch (e) {
     console.error(`Error hosting game ${JSON.stringify(e.stack)}`);
+    return;
   }
+}
+
+async function GetQuestions(gameInfo){
   const pe = 'gameId,questionNumber,'
-    + 'question, answerA, answerB, answerC, answerD, correctAnswer,'
-    + 'questionGroup, alternatives, answerFollowup, questionURI, answerURI';
+  + 'question, answerA, answerB, answerC, answerD, correctAnswer,'
+  + 'questionGroup, alternatives, answerFollowup, questionURI, answerURI';
   // load question array for host
   const queryparms = {
     TableName: questionsTableName,
@@ -105,8 +106,9 @@ async function hostGame(gameInfo, connectionId, domainName, stage) {
     KeyConditionExpression: '#f1 = :v1',
     ProjectionExpression: pe,
   };
-  const Key = { gameId: gameInfo.gameId, playerName: gameInfo.playerName };
+  const Key = { sk: gameInfo.gameId, pk: gameInfo.playerName };
   try {
+    let returnMessage = {};
     const questions = await ddb.query(queryparms).promise();
     returnMessage.question = questions.Items;
     returnMessage.channel = 'livestart';
@@ -115,12 +117,26 @@ async function hostGame(gameInfo, connectionId, domainName, stage) {
     returnMessage.gameId = quizHeader.Item.gameId;
     returnMessage.questionType = quizHeader.Item.questionType;
     returnMessage.quizMode = quizHeader.Item.quizMode;
-    // returnMessage.questions = questionArray;
+    return returnMessage;
   } catch (e) {
     console.error(`quizHeader ${JSON.stringify(Key)}`);
     console.error(`Error getting game ${e}`);
     return { statusCode: 500, body: 'Looks like an invalid game' };
   }
+}
+
+async function hostGame(gameInfo, connectionId) {
+  // store the game to be hosted
+  const parms = {};
+  delete gameInfo.subaction; //
+  gameInfo.hostConnection = connectionId;
+  parms.Item = gameInfo;
+  //Need to delete any reference to other live games
+  //query the table, find them, delete them
+  await UpdatePlayerInventory(gameInfo);
+  await AddHostConnection(gameInfo, connectionId);
+  const returnMessage = await GetQuestions(gameInfo);
+
   let message = {};
   // user, channel, message
   message.TopicArn = chatTopicArn;
@@ -128,12 +144,11 @@ async function hostGame(gameInfo, connectionId, domainName, stage) {
   message.Subject = 'globalchat';
   try {
     await sns.publish(message).promise();
-    return { statusCode: 200, body: "successful" };
+    return { statusCode: 200, body: JSON.stringify(returnMessage) };
   } catch (e) {
     console.error(`error sending sns message ${JSON.stringify(e)}`);
     return { statusCode: 500, body: "could not send sns messaage" };
   }
-  
 }
 
 async function sendMessages(analytics) {
@@ -141,7 +156,7 @@ async function sendMessages(analytics) {
     dateOfQuiz: dateString(), quizMode: analytics.quizMode, 
     questions: analytics.questions });
   let val = await kinesis.putRecord({Data, StreamName: scoreStream, PartitionKey: 'score001' }).promise(); 
-  if(val.hasOwnProperty('SequenceNumber'))
+  if(Object.prototype.hasOwnProperty.call(val, 'SequenceNumber'))
     return { statusCode: 200, body: 'analytics sent' };
   else {
     console.error(`error writing to shard: ${JSON.stringify(val)} `);
@@ -160,41 +175,13 @@ async function updateProgress(progress) {
   return 1;
 }
 
-async function deleteRecords(msg) {
-  // delete records here if on reset
-  // need to grab regular index
-  const recsToDeleteParms = {
-    TableName: playersTableName,
-    ProjectionExpression: 'gameId, connectionId',
-    KeyConditionExpression: '#f1 = :v1',
-    ExpressionAttributeValues: { ':v1': msg.gameId },
-    ExpressionAttributeNames: { '#f1': 'gameId' },
-  };
-  let deleteData;
-  try {
-    deleteData = await ddb.query(recsToDeleteParms).promise();
-  } catch (e) {
-    console.error(`error with getting delete ${JSON.stringify(recsToDeleteParms)}`);
-    return { statusCode: 500, body: e.stack };
-  }
-  for (let i = 0; i < deleteData.Count; i += 1) {
-    const parms = { gameId: msg.gameId, connectionId: deleteData.Items[i].connectionId };
-    await deleteItem(playersTableName, parms);
-  }
-  const parms = { gameId: msg.gameId, playerName: msg.playerName };
-  await deleteItem(gamesTableName, parms);
-  return 1;
-}
-
 exports.handler = async (event) => {
   let message = {};
-  let parms = {};
   let val = {statusCode: 400, message: "could not find switch"};
   message = JSON.parse(event.body).data;
   switch (message.subaction) {
     case 'hostgame':
-      val = hostGame(message, event.requestContext.connectionId,
-        event.requestContext.domainName, event.requestContext.stage);
+      val = hostGame(message, event.requestContext.connectionId);
       break;
     case 'scoreboardupdate':
       try {
@@ -218,10 +205,16 @@ exports.handler = async (event) => {
       message.domainName = event.requestContext.domainName;
       message.stage = event.requestContext.stage;
       message.action = 'liveadmin';
-      parms.Message = JSON.stringify(message);
+
       val = await WSSend.SendChat(message);
       if (message.subaction === 'reset') {
-        await deleteRecords(message);
+        const event = { Entries: [{
+          DetailType: "Websockets.game_end"  ,
+          Source: 'sts',
+          Detail: JSON.stringify({gameId: message.gameId, playerName: message.playerName}),
+          EventBusName: eventBusName
+        }]};
+        await eb.putEvents(event).promise();
       }
       break;
   }

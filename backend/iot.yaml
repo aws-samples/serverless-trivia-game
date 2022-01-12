@@ -10,8 +10,6 @@ Parameters:
     Type: String
   GamesDetailTable:
     Type: String
-  ActiveGamesTable:
-    Type: String
   HighScoreTable:
     Type: String
   PlayerProgressTopicName:
@@ -37,7 +35,17 @@ Parameters:
   ChatTopicArn:
     Type: String
     Description: Arn for the SNS Chat Topic
-  
+  PrivateSubnetA:
+    Type: String
+    Description: Private Subnet A
+  PrivateSubnetB:
+    Type: String
+    Description: Private Subnet B
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  EventBusName:
+    Type: String
+    Description: Name of the EventBus
   
 Globals:
   Function:
@@ -53,214 +61,44 @@ Globals:
       - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
 
 Resources:
-  VPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
-      Tags:
-        - Key: Name
-          Value: !Ref AWS::StackName
-
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Ref AWS::StackName
-
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
-
-  PublicSubnetA:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      CidrBlock: 10.0.0.0/28
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName} Public Subnet (AZ1)
-
-  PublicSubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
-      CidrBlock: 10.0.0.82/28
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName} Public Subnet (AZ2)
-
-  PrivateSubnetA:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      CidrBlock: 10.0.1.0/24
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName} Private Subnet (AZ1)
-
-  PrivateSubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
-      CidrBlock: 10.0.2.0/24
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName} Private Subnet (AZ2)
-
-  NatGatewayAEIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-
-  NatGatewayBEIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-
-  NatGatewayA:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGatewayAEIP.AllocationId
-      SubnetId: !Ref PublicSubnetA
-
-  NatGatewayB:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGatewayBEIP.AllocationId
-      SubnetId: !Ref PublicSubnetB
-
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName} Public Routes
-
-  DefaultPublicRoute:
-    Type: AWS::EC2::Route
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-  PublicSubnetARouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnetA
-
-  PublicSubnetBRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnetB
-
-  PrivateRouteTableA:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName} Private Routes (AZ1)
-
-  DefaultPrivateRouteA:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTableA
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGatewayA
-
-  PrivateSubnetARouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTableA
-      SubnetId: !Ref PrivateSubnetA
-
-  PrivateRouteTableB:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName} Private Routes (AZ2)
-
-  DefaultPrivateRouteB:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTableB
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGatewayB
-
-  PrivateSubnetBRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTableB
-      SubnetId: !Ref PrivateSubnetB
-
-  NoIngressSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: "no-ingress-sg"
-      GroupDescription: "Security group with no ingress rule"
-      VpcId: !Ref VPC
 
   RedisCluster:
     Type: AWS::ElastiCache::CacheCluster
     Properties:
-      CacheNodeType: cache.t2.small
-      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      CacheNodeType: cache.r6g.4xlarge
+      CacheSubnetGroupName: !Ref RedisClusterSubnetGroup
       Engine: redis
       NumCacheNodes: 1
       VpcSecurityGroupIds:
         - !GetAtt RedisClusterSecurityGroup.GroupId
 
-  RedisClusterSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Lock down Redis to VPC
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 6379
-        ToPort: 6379
-        SourceSecurityGroupId: !GetAtt LambdaSecurityGroup.GroupId
 
-  RedisSubnetGroup:
+  RedisClusterSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
     Properties:
       Description: Subnets for Redis
       SubnetIds:
         - !Ref PrivateSubnetA
         - !Ref PrivateSubnetB
-      
+
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      VpcId: !Ref VpcId
       GroupDescription: Lambda Security Group
-      SecurityGroupIngress:
-        - IpProtocol: "tcp"
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-      VpcId: !Ref VPC
 
+  RedisClusterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lock down Redis to VPC
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 6379
+        ToPort: 6379
+        SourceSecurityGroupId: !GetAtt LambdaSecurityGroup.GroupId
+
+      
   SendQuestionFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -288,6 +126,8 @@ Resources:
           Type: IoTRule
           Properties:
             Sql: SELECT * FROM 'games/+/nextquestion'
+      Tags:
+        Dashboard: IoT
 
   SendQuestionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -314,11 +154,11 @@ Resources:
       MemorySize: 1536
       Environment:
         Variables:
-          ACTIVE_GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
           GAMES_DETAIL_TABLE_NAME: !Sub "${GamesDetailTable}"
           IOT_ENDPOINT: !Sub "${IoTEndpoint}"
           REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
           REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+          EVENT_BUS_NAME: !Sub "${EventBusName}"          
           CHAT_TOPIC_ARN: !Sub "${ChatTopicArn}"
           REGION: !Sub "${AWS::Region}"
       VpcConfig:
@@ -329,11 +169,13 @@ Resources:
           - !Ref PrivateSubnetB
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Sub "${ActiveGamesTable}"
+            TableName: !Sub "${PlayerInventoryTable}"
         - DynamoDBReadPolicy:
             TableName: !Sub "${GamesDetailTable}"
         - SNSPublishMessagePolicy:
             TopicName: !Sub "${ChatTopicName}"
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Sub "${EventBusName}"
         - CloudWatchLambdaInsightsExecutionRolePolicy
         - !Ref CacheGamePolicy
       Events:
@@ -341,6 +183,8 @@ Resources:
           Type: IoTRule
           Properties:
             Sql: SELECT * FROM 'hostgame'
+      Tags:
+        Dashboard: IoT
 
   CacheGameLogGroup:
     Type: AWS::Logs::LogGroup
@@ -367,7 +211,6 @@ Resources:
       MemorySize: 1024
       Environment:
         Variables:
-          IOT_ENDPOINT: !Sub "${IoTEndpoint}"
           REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
           REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
           REGION: !Sub "${AWS::Region}"
@@ -385,6 +228,8 @@ Resources:
           Type: IoTRule
           Properties:
             Sql: SELECT * FROM 'games/+/join/+'
+      Tags:
+        Dashboard: IoT
 
   JoinGameLogGroup:
     Type: AWS::Logs::LogGroup
@@ -432,6 +277,8 @@ Resources:
           Type: IoTRule
           Properties:
             Sql: SELECT * FROM 'games/+/answers/+'
+      Tags:
+        Dashboard: IoT
 
   ReceiveAnswerIoTPolicy:
     Type: 'AWS::IAM::ManagedPolicy'
@@ -482,6 +329,8 @@ Resources:
           Type: IoTRule
           Properties:
             Sql: SELECT * FROM 'games/+/startgame'
+      Tags:
+        Dashboard: IoT
 
   StartGameLogGroup:
     Type: AWS::Logs::LogGroup
@@ -509,11 +358,11 @@ Resources:
       Timeout: 20
       Environment:
         Variables:
-          ACTIVE_GAMES_TABLE_NAME: !Sub "${ActiveGamesTable}"
           LEADER_BOARD_TABLE_NAME: !Sub "${HighScoreTable}"
           PLAYER_PROGRESS_TOPIC: !Sub "${PlayerProgressTopicArn}"
           REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
           REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+          EVENT_BUS_NAME: !Sub "${EventBusName}"          
           REGION: !Sub "${AWS::Region}"
       VpcConfig:
         SecurityGroupIds:
@@ -523,21 +372,24 @@ Resources:
           - !Ref PrivateSubnetB
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Sub "${ActiveGamesTable}"
+            TableName: !Sub "${PlayerInventoryTable}"
         - DynamoDBCrudPolicy:
             TableName: !Sub "${HighScoreTable}"
         - SNSPublishMessagePolicy:
             TopicName: !Sub "${PlayerProgressTopicName}" 
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Sub "${EventBusName}"
         - CloudWatchLambdaInsightsExecutionRolePolicy
       Events:
         IoTRule:
           Type: IoTRule
           Properties:
             Sql: SELECT * FROM 'games/+/endthegame'
+      Tags:
+        Dashboard: IoT
 
   EndGameLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref EndGameFunction]]
-

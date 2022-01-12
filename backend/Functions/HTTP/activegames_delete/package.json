@@ -1,0 +1,16 @@
+{
+  "name": "activegames_delete",
+  "version": "1.0.0",
+  "description": "Delete ActiveGames via DAX",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tim Bruce",
+  "license": "MIT",
+  "dependencies": {
+    "amazon-dax-client": "^1.2.6",
+    "aws-embedded-metrics": "^2.0.1",
+    "aws-sdk": "^2.814.0"
+  }
+}
