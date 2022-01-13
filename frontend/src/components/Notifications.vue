@@ -46,11 +46,7 @@ export default {
         myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken },
         avatar: {
             get: function() { return this.$store.state.profile.avatar },
-            set: function(newval) {this.$store.commit('setProfileAvatar', newval);}
-        },
-        thumbnail: {
-            get: function() { return this.$store.state.user.picture },
-            set: function(newval) {this.$store.commit('setUserPicture', newval);}
+            set: function(newval) {this.$store.commit('setProfileAvatar', newval); this.$store.commit('setUserPicture', newval);}
         }
     },
     data: function() {return{
@@ -125,7 +121,6 @@ export default {
             this.snackbar = true;
             if(payload.result == "success") {
                 this.avatar = payload.avatar;
-                this.thumbnail = payload.thumbnail;
             }
         }
     }
