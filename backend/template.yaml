@@ -266,7 +266,6 @@ Resources:
         PlayerWalletTopicName: !GetAtt PlayerWalletTopic.TopicName
         PlayerWalletTopicArn: !Ref PlayerWalletTopic
         UserPoolID: !Ref UserPool
-        UserPoolArn: !GetAtt UserPool.Arn
         AppClientID: !Ref UserPoolClient
         LeaderboardTopicName: !GetAtt LeaderboardTopic.TopicName
         LeaderboardTopicArn: !Ref LeaderboardTopic
@@ -528,43 +527,6 @@ Resources:
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref WebpushNotificationFunction]]
 
-  RekognitionDetectModerationLabelsPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties: 
-      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-RekognitionDetectModerationLabelsPolicy" ] ]
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Action:
-              - rekognition:DetectModerationLabels
-            Resource: '*'
-      Roles:
-        - !Ref PlayerAvatarModerateFunctionRole
-  
-  PlayerAvatarModerateFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      AutoPublishAlias: Live
-      CodeUri: Functions/Main/playeravatar_moderate/
-      MemorySize: 1024
-      Environment:
-        Variables:
-          PLAYER_AVATAR_BUCKET: !Ref PlayerAvatarBucket
-      Policies:
-        - S3ReadPolicy:
-            BucketName: !Ref PlayerAvatarBucket
-        - S3WritePolicy:
-            BucketName: !Ref PlayerAvatarBucket
-        - CloudWatchLambdaInsightsExecutionRolePolicy
-      Tags:
-        Dashboard: GeneralOps
-  PlayerAvatarModerateLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties: 
-      RetentionInDays: !Sub "${LogRetentionDays}"
-      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerAvatarModerateFunction]]
-
   PlayerAvatarThumbnailFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -583,25 +545,6 @@ Resources:
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerAvatarThumbnailFunction]]
-
-  PlayerAvatarDeleteFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      AutoPublishAlias: Live
-      CodeUri: Functions/Main/playeravatar_delete/
-      MemorySize: 1024
-      Policies:
-        - S3CrudPolicy:
-            BucketName: !Ref PlayerAvatarBucket
-        - CloudWatchLambdaInsightsExecutionRolePolicy
-      Tags:
-        Dashboard: GeneralOps
-
-  PlayerAvatarDeleteLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties: 
-      RetentionInDays: !Sub "${LogRetentionDays}"
-      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerAvatarDeleteFunction]]
             
   PlayerAvatarCloudfrontOAI:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
@@ -717,16 +660,29 @@ Resources:
       Properties: 
         Name: !Sub ${AWS::StackName}
 
+  CognitoUpdateUserAttributesPolicy:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-CognitoUpdateUserAttributesPolicy" ] ]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - cognito-idp:AdminUpdateUserAttributes
+            Resource: !GetAtt UserPool.Arn
+      Roles:
+        - !Ref PlayerAvatarStateMachineRole
+  
   PlayerAvatarStateMachine:
     Type: AWS::Serverless::StateMachine
     Properties:
       DefinitionUri: player_avatar_statemachine/player_avatar.asl.json
       DefinitionSubstitutions:
-        ModerateFunction: !Ref PlayerAvatarModerateFunction
         ThumbnailFunction: !Ref PlayerAvatarThumbnailFunction
-        DeleteFunction: !Ref PlayerAvatarDeleteFunction
-        PlayerPutFunction: !GetAtt HTTP.Outputs.PlayerPutFunction
         DistributionUrl: !GetAtt PlayerAvatarDistribution.DomainName
+        PlayerTable: !GetAtt DT.Outputs.PlayerTable
+        CognitoUserPoolId: !Ref UserPool
         EventBusName: !Ref STSEventBus
         EventSource: sts.avatar
       Type: EXPRESS
@@ -740,16 +696,16 @@ Resources:
         Level: ALL
       Policies:
         - LambdaInvokePolicy:
-            FunctionName: !Ref PlayerAvatarModerateFunction
-        - LambdaInvokePolicy:
             FunctionName: !Ref PlayerAvatarThumbnailFunction
-        - LambdaInvokePolicy:
-            FunctionName: !GetAtt HTTP.Outputs.PlayerPutFunction
-        - LambdaInvokePolicy:
-            FunctionName: !Ref PlayerAvatarDeleteFunction
         - EventBridgePutEventsPolicy:
             EventBusName: !Ref STSEventBus
+        - DynamoDBWritePolicy:
+            TableName: !GetAtt DT.Outputs.PlayerTable
+        - S3CrudPolicy:
+            BucketName: !Ref PlayerAvatarBucket
+        - RekognitionLabelsPolicy: {}
         - CloudWatchLogsFullAccess
+        
       Events:
         AvatarUploadedEvent:
           Type: EventBridgeRule

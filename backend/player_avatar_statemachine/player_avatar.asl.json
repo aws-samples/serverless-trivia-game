@@ -6,41 +6,36 @@
       "Type": "Parallel",
       "Branches": [
         {
-          "StartAt": "ModerateContent",
+          "StartAt": "Moderate",
           "States": {
-            "ModerateContent": {
+            "Moderate": {
               "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
-                "FunctionName": "${ModerateFunction}",
-                "Payload": {
-                  "bucketName.$": "$.bucketName",
-                  "key.$": "$.key",
-                  "contentType.$": "$.Content-Type"
+                "Image": {
+                  "S3Object": {
+                    "Bucket.$": "$.bucketName",
+                    "Name.$": "$.key"
+                  }
                 },
-                "Qualifier": "Live"
+                "MinConfidence": 75
               },
+              "Resource": "arn:aws:states:::aws-sdk:rekognition:detectModerationLabels",
               "ResultPath": "$.moderation",
               "ResultSelector": {
-                "appropriate.$": "$.Payload.appropriate",
-                "labels.$": "$.Payload.moderationLabels"
+                "labels.$": "$.ModerationLabels"
               },
-              "Next": "CheckInappropriate"
+              "Next": "Label Detected?"
             },
-            "CheckInappropriate": {
+            "Label Detected?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.moderation.appropriate",
-                  "BooleanEquals": false,
-                  "Next": "DeleteContent"
-                },
-                {
-                  "Variable": "$.moderation.appropriate",
-                  "BooleanEquals": true,
-                  "Next": "CreateThumbnail"
+                  "Variable": "$.moderation.labels[0]",
+                  "IsPresent": true,
+                  "Next": "DeleteObject"
                 }
-              ]
+              ],
+              "Default": "CreateThumbnail"
             },
             "CreateThumbnail": {
               "Type": "Task",
@@ -55,69 +50,91 @@
                 },
                 "Qualifier": "Live"
               },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
               "ResultPath": "$.profile",
               "ResultSelector": {
                 "avatar.$": "States.Format('https://${DistributionUrl}/{}', $$.Execution.Input.key)",
                 "thumbnail.$": "States.Format('https://${DistributionUrl}/{}', $.Payload.key)"
               },
-              "Next": "UpdateProfile"
+              "Next": "ProfileUpdate"
             },
-            "UpdateProfile": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${PlayerPutFunction}",
-                "Payload": {
-                  "pathParameters": {
-                    "playerId.$": "$.x-amz-meta-playerid"
-                  },
-                  "body.$": "States.JsonToString($.profile)"
+            "ProfileUpdate": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "DynamoDBUpdate",
+                  "States": {
+                    "DynamoDBUpdate": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::dynamodb:updateItem",
+                      "Parameters": {
+                        "TableName": "${PlayerTable}",
+                        "Key": {
+                          "playerName": {
+                            "S.$": "$$.Execution.Input.x-amz-meta-playerid"
+                          }
+                        },
+                        "UpdateExpression": "SET avatar = :avatar, thumbnail = :thumbnail",
+                        "ExpressionAttributeValues": {
+                          ":avatar": {
+                            "S.$": "$.profile.avatar"
+                          },
+                          ":thumbnail": {
+                            "S.$": "$.profile.thumbnail"
+                          }
+                        },
+                        "ReturnValues": "UPDATED_NEW"
+                      },
+                      "End": true,
+                      "ResultPath": "$.dynamoUpdateResult"
+                    }
+                  }
                 },
-                "Qualifier": "HTTPLive"
-              },
-              "ResultPath": "$.output",
-              "ResultSelector": {
-                "result": "success",
-                "message": "Avatar accepted",
-                "data.$": "States.JsonToString($.Payload.body)"
-              },
-              "Next": "PublishOutput"
+                {
+                  "StartAt": "CognitoUpdate",
+                  "States": {
+                    "CognitoUpdate": {
+                      "Type": "Task",
+                      "End": true,
+                      "Parameters": {
+                        "UserAttributes": [
+                          {
+                            "Name": "picture",
+                            "Value.$": "$.profile.thumbnail"
+                          }
+                        ],
+                        "UserPoolId": "${CognitoUserPoolId}",
+                        "Username.$": "$$.Execution.Input.x-amz-meta-playerid"
+                      },
+                      "Resource": "arn:aws:states:::aws-sdk:cognitoidentityprovider:adminUpdateUserAttributes",
+                      "ResultPath": "$.cognitoUpdateResult"
+                    }
+                  }
+                }
+              ],
+              "Next": "Publish Accepted"
             },
-            "DeleteContent": {
+            "Publish Accepted": {
               "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${DeleteFunction}",
-                "Payload": {
-                  "bucketName.$": "$.bucketName",
-                  "key.$": "$.key"
-                },
-                "Qualifier": "Live"
-              },
-              "ResultPath": "$.deleteTask",
-              "Next": "BundleOutput"
-            },
-            "BundleOutput": {
-              "Type": "Pass",
-              "Parameters": {
-                "result": "error",
-                "message": "Avatar rejected",
-                "data.$": "States.JsonToString($.moderation)"
-              },
-              "ResultPath": "$.output",
-              "Next": "PublishOutput"
-            },
-            "PublishOutput": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::events:putEvents",
               "Parameters": {
                 "Entries": [
                   {
                     "Detail": {
                       "playerName.$": "$$.Execution.Input.x-amz-meta-playerid",
-                      "result.$": "$.output.result",
-                      "message.$": "$.output.message",
-                      "data.$": "$.output.data",
+                      "result": "success",
+                      "message": "Avatar accepted",
+                      "data.$": "States.JsonToString($[0].profile)",
                       "topic": "avatar"
                     },
                     "DetailType": "Avatar Processing Completed",
@@ -126,6 +143,38 @@
                   }
                 ]
               },
+              "Resource": "arn:aws:states:::aws-sdk:eventbridge:putEvents",
+              "End": true
+            },
+            "DeleteObject": {
+              "Type": "Task",
+              "Parameters": {
+                "Bucket.$": "$.bucketName",
+                "Key.$": "$.key"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:s3:deleteObject",
+              "ResultPath": "$.s3DeleteResult",
+              "Next": "Publish Rejected"
+            },
+            "Publish Rejected": {
+              "Type": "Task",
+              "Parameters": {
+                "Entries": [
+                  {
+                    "Detail": {
+                      "playerName.$": "$$.Execution.Input.x-amz-meta-playerid",
+                      "result": "error",
+                      "message": "Avatar rejected",
+                      "data.$": "States.JsonToString($.moderation)",
+                      "topic": "avatar"
+                    },
+                    "DetailType": "Avatar Processing Completed",
+                    "EventBusName": "${EventBusName}",
+                    "Source": "${EventSource}"
+                  }
+                ]
+              },
+              "Resource": "arn:aws:states:::aws-sdk:eventbridge:putEvents",
               "End": true
             }
           }
