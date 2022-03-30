@@ -37,17 +37,17 @@ The main menu allows users to navigate to the main portions of the game, includi
 
 To create games, click on the "Manage" button from the main menu. This will show you your current games. If you are a new player, you will not see any listed, such as:
 
-![Image of Admin Edit Games])(images/admin_games.png)
+![Image of Admin Edit Games](images/admin_games.png)
 
 If you have a game, a radio button will appear next to it for you to select it and take action on it, for instance to sell it on the marketplace or to edit the game. Editing your game is similar to creating a new game, except that fields will be prefilled.
 
 To create a new game, click the "Create New" button. This will open the game header view where you can enter in the quiz name, description, number of questions, select the type of question, and the type of game.
 
-![Image of Admin Game Header])(images/admin_game_header.png)
+![Image of Admin Game Header](images/admin_game_header.png)
 
 Once you enter in the game header information, click "Enter Questions" to enter questions. A multiple choice question might look like this:
 
-![Image of Admin Game Question])(images/admin_game_question.png)
+![Image of Admin Game Question](images/admin_game_question.png)
 
 Continue entering questions until you enter all of your questions, clicking "Save Question" to save it to the database.
 
@@ -55,7 +55,7 @@ Continue entering questions until you enter all of your questions, clicking "Sav
 
 Single Player games need to be run one time to start it. This gives you the opportunity to make sure your quiz is in the format you want it in before starting it. To run the game, click the "Run" button on the main menu and you will see a list of your quizzes. Find your Single Player game and click it. This will begin running the game and players will be able to find it when they play games.
 
-![Image of Admin Run Game])(images/admin_host_question.png)
+![Image of Admin Run Game](images/admin_host_game.png)
 
 ## Playing a Single Player Game
 
