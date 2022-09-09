@@ -15,6 +15,7 @@
 
 <template>
     <v-container>
+        <v-row class="mb-6"></v-row>
         <v-row>
             <v-toolbar color="primary" class="headline black--text">
                 <v-spacer></v-spacer>
@@ -22,6 +23,7 @@
                 <v-spacer></v-spacer>
             </v-toolbar>
         </v-row>
+        <v-row class="mb-12"></v-row>
         <v-row>
             <v-alert v-model="error" dismissible type="error" style="error">{{errortext}}</v-alert>
         </v-row>
@@ -44,7 +46,7 @@
             <v-select label="Quiz Category" :items="quizCategories" v-model='quizCategory'/>
         </v-row>
         <v-row>
-            <v-btn x-large block color="accent" class="white--text" v-on:click='checkinput'>Enter Questions</v-btn>
+            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click='checkinput'>Enter Questions</v-btn>
         </v-row>
     </v-container>
 </template>

@@ -24,13 +24,15 @@
 </template>
 
 <script>
-import JoinGame from './Joingame';
-import Question from './Question';
-import Scoreboard from './Scoreboard';
-import LiveGamePlayerController from './LiveGamePlayerController';
-import BlitzGamePlayer from './BlitzGamePlayer';
+import { defineComponent } from 'vue'
+import JoinGame from './Joingame.vue'
+import Question from './Question.vue'
+import Scoreboard from './Scoreboard.vue'
+import LiveGamePlayerController from './LiveGamePlayerController.vue'
+import BlitzGamePlayer from './BlitzGamePlayer.vue'
+import { useGameStore } from '@/stores/game.js'
 
-export default {
+export default defineComponent({
     name: 'GameController',
     components: {
         JoinGame,
@@ -39,19 +41,32 @@ export default {
         LiveGamePlayerController,
         BlitzGamePlayer,
     },
+    emits: ['send-raw-message', 'send-iot-message', 'subscribe-iot-topic'],
     computed: {
-        gamemode: function() { return this.$store.state.gamemode },
-        isLive: function() {return this.$store.state.live.player.live},
-        isBlitz: function() {return this.$store.state.live.player.blitz},
-        quizName: function() {return this.$store.state.quizName},
-        gameId: function() {return this.$store.state.gameId},
+        gamemode: function() { 
+            const gameStore = useGameStore()
+            return gameStore.gamemode },
+        isLive: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.player.live},
+        isBlitz: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.player.blitz},
+        quizName: function() {
+            const gameStore = useGameStore()
+            return gameStore.quizName},
+        gameId: function() {
+            const gameStore = useGameStore()
+            return gameStore.gameId},
     },
     methods: {
         closeScoreboard: function() {
-            this.$store.commit('setQuestions', {});
-            this.$store.commit('setScoreboard', []);
-            this.$store.commit('setQuizName','');
-            this.$store.commit('setGameId', '');
+            const gameStore = useGameStore()
+            gameStore.game.questions = {}
+            gameStore.scoreboard.players = []
+            gameStore.game.quizName = ''
+            gameStore.admin.newquiz.gameid = ''
+            gameStore.gamemode = 'showgames'
             this.$store.commit('setGameState', 'showgames');
         },
 
@@ -73,9 +88,10 @@ export default {
         },
 
         mainmenu() {
-            this.$store.commit('setUIMode', 'home');
+            const gameStore = useGameStore()
+            gameStore.uimode = 'home'
         }
 
     }
-}
+})
 </script>

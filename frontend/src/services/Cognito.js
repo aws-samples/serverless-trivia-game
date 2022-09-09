@@ -13,18 +13,20 @@
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-const AWS = require('aws-sdk');
-import Config from './AWSConfig';
+//const AWS = require('aws-sdk');
+import * as AWS from 'aws-sdk'
+import { AWSConfig } from './AWSConfig'
 import { CognitoUser, CognitoUserAttribute, CognitoUserPool, AuthenticationDetails } from 'amazon-cognito-identity-js';
+import { Auth } from 'aws-amplify'
 
 let userPool = new CognitoUserPool({
-        UserPoolId: Config.userPoolId,
-        ClientId: Config.appClientId
+        UserPoolId: AWSConfig.userPoolId,
+        ClientId: AWSConfig.appClientId
     });
 
 let cognitoUser;
     
-AWS.config.region = Config.region;
+AWS.config.region = AWSConfig.region;
       
 function authenticateUser(uid, pwd) {
     var promise = new Promise(function(resolve, reject) {
@@ -50,9 +52,9 @@ function authenticateUser(uid, pwd) {
 
 function getCredentials(token) {
     var promise = new Promise((resolve, reject) => {   
-        let providerKey = `cognito-idp.${AWS.config.region}.amazonaws.com/${Config.userPoolId}`;
+        let providerKey = `cognito-idp.${AWS.config.region}.amazonaws.com/${AWSConfig.userPoolId}`;
         let configCreds = {
-            IdentityPoolId: Config.identityPoolId,
+            IdentityPoolId: AWSConfig.identityPoolId,
             Logins: {
                 [providerKey]: token
             },
@@ -126,7 +128,7 @@ function loginUser(username, password) {
     });
 }
 
-export function login(username, password){
+export const login = function(username, password) {
     return new Promise(function(resolve, reject) {
         loginUser(username, password)
         .then(function(userdata){
@@ -139,7 +141,7 @@ export function login(username, password){
     });
 }
 
-export async function signup(username, password, email) {
+export const signup = async function(username, password, email) {
     return new Promise(function(resolve, reject){
         let attributeList = [];
         let attributeEmail = new CognitoUserAttribute({ Name: 'email', Value: email });
@@ -156,7 +158,7 @@ export async function signup(username, password, email) {
     });
 }
 
-export function triggerforgotpw(username) {
+export const triggerforgotpw = function(username) {
     return new Promise(function(resolve, reject){
         var userData = {
             Username: username,
@@ -176,7 +178,7 @@ export function triggerforgotpw(username) {
     });
 }
 
-export function resetforgotpw(username, code, password) {
+export const resetforgotpw = function(username, code, password) {
 
     return new Promise(function(resolve, reject){
         var userData = {
@@ -195,7 +197,7 @@ export function resetforgotpw(username, code, password) {
     });
 }
 
-export async function cognitosignout(){
+export const cognitosignout = async function (){
     await cognitoUser.globalSignOut({
         onSuccess() {
             console.log('successfully logged out');

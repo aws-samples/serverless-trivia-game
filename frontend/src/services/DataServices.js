@@ -15,7 +15,7 @@
 
 import Api from '@/services/Api';
 
-export default{
+export const DataService = {
     getActiveGameList(parms){
         try{
             return Api(parms.jwt).get('/activegames');

@@ -25,13 +25,15 @@
         <component v-bind:is="currentTabComponent" v-bind:data=currentChat
         class="tab"></component>
         <v-text-field label="Chat" v-model="chat" placeholder="Chat" class="white--text"></v-text-field>
-        <v-btn color="accent" class="white--text" v-on:click='handlechat'>send chat</v-btn>
+        <v-btn color="#00FFFF" class="white--text" v-on:click='handlechat'>send chat</v-btn>
     </div></v-col></v-row></v-col>
 </template>
 <script>
-import GlobalChat from './Globalchat';
+import { defineComponent } from 'vue'
+import GlobalChat from './Globalchat.vue'
+import { useGameStore } from '@/stores/game.js'
 
-export default {
+export default defineComponent({
     name: 'ChatController',
 
     components: {
@@ -46,8 +48,12 @@ export default {
     },
 
     computed: {
-        globalchat: function() { return this.$store.state.chat.global },
-        username: function() { return this.$store.state.user.username },
+        globalchat: function() { 
+            const gameStore = useGameStore()
+            return gameStore.chat.global },
+        username: function() { 
+            const gameStore = useGameStore()
+            return gameStore.user.username },
         currentTabComponent: function() {
             return this.currentTab.replace(/\s/g, '');
         },
@@ -70,5 +76,5 @@ export default {
             }
         }
     }
-}
+})
 </script>

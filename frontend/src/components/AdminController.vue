@@ -24,12 +24,14 @@
 </template>
 
 <script>
-import Hostgame from './Hostgame';
-import Managequiz from './Managequiz';
-import LiveGameAdminController from './LiveGameAdminController';
-import BlitzGameAdmin from './BlitzGameAdmin';
+import { defineComponent } from 'vue'
+import Hostgame from './Hostgame.vue'
+import Managequiz from './Managequiz.vue'
+import LiveGameAdminController from './LiveGameAdminController.vue'
+import BlitzGameAdmin from './BlitzGameAdmin.vue'
+import { useGameStore } from '@/stores/game.js'
 
-export default {
+export default defineComponent ({
     name: 'AdminController',
     components: {
         Hostgame,
@@ -37,6 +39,7 @@ export default {
         LiveGameAdminController,
         BlitzGameAdmin
     },
+    emits: ['send-message', 'send-iot-message', 'subscribe-iot-topic', 'send-message'],
     methods: {
         sendmessage: function(message) {
             this.$emit("send-message", message);
@@ -52,12 +55,19 @@ export default {
         }
     },
     computed: {
-        isLive: function() {return this.$store.state.live.admin.live;},
-        isBlitz: function() {return this.$store.state.live.admin.blitz;}, 
-        getMode: function() {return this.$store.state.admin.hostgames.mode;},
-        adminmode: function() {return this.$store.state.adminmode;},
-        liveAdminGameKey: function() {return this.$store.state.admin.liveGameKey;}
+        isLive: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.live},
+        isBlitz: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.blitz}, 
+        getMode: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.hostgames.mode},
+        adminmode: function() {
+            const gameStore = useGameStore()
+            return gameStore.adminmode}
     }
-}
+})
 </script>
 

@@ -20,7 +20,7 @@
                 <v-toolbar-title>Select a game to purchase</v-toolbar-title>
                 <v-spacer></v-spacer>
             </v-toolbar>            
-            <v-card>
+            <!-- <v-card>
                 <v-card-title>Game Listing<v-spacer></v-spacer>
                     <v-text-field
                         v-model="search"
@@ -53,21 +53,66 @@
                         </template>
                     </v-data-table>
                 </v-row>
-            </v-card>
-            <v-row class="mb-1">
-                <v-btn x-large block color="accent" class="white--text" v-on:click="purchaseGame">Purchase Game</v-btn>
+            </v-card> -->
+            <v-row class="mb-6">
+                <v-col cols="3"></v-col><v-col cols="6">
+                    <v-row>
+                    <v-table>
+                        <thead>
+                            <tr>
+                                <th>
+
+                                </th>
+                                <th class="text-left">
+                                    Quiz Name
+                                </th>
+                                <th class="text-left">
+                                    Quiz Mode
+                                </th>
+                                <th class="text-left">
+                                    Question Type
+                                </th>
+                                <th class="text-left">
+                                    Seller
+                                </th>
+                                <th class="text-left">
+                                    Amount
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="game in marketplaceListings"
+                                :key="game.gameId"
+                            >
+                                <td><input type="radio" :value="game.gameId" v-model="pickedGameId"></td>
+                                <td>{{ game.quizName }}</td>
+                                <td>{{ game.quizMode }}</td>
+                                <td>{{ game.questionType }}</td>
+                                <td>{{ game.playerName }}</td>
+                                <td>{{ game.amount }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table></v-row>
+                </v-col>
             </v-row>
-            <v-row class="mb-1">
-                <v-btn x-large block color="accent" class="white--text" v-on:click="closeList">Home</v-btn>
+
+            <v-row class="mb-6">
+                <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="purchaseGame">Purchase Game</v-btn>
+            </v-row>
+            <v-row class="mb-6">
+                <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="closeList">Home</v-btn>
             </v-row>
         </span>
     </div>
 </template>
 
 <script>
-import DataService from '@/services/DataServices';
+import { defineComponent } from 'vue'
+import { DataService } from '@/services/DataServices.js'
+import { useGameStore } from '@/stores/game.js'
 
-export default {
+export default defineComponent({
     name: 'Marketplace',
     props: {
         marketplaceListings: Array
@@ -95,36 +140,47 @@ export default {
                 {
                     if(game.gameId===this.pickedGameId)
                     {
-                        sellerPlayerId = game.playerName;
+                        sellerPlayerId = game.playerName
                     }
                 });
                 let results = await DataService.purchaseGame({gameId: this.pickedGameId, playerId: this.username,
-                    sellerPlayerId, jwt: this.myjwt});
+                    sellerPlayerId, jwt: this.myjwt})
+                console.info(`here are the results: ${JSON.stringify(results)}`)
                 let output = JSON.parse(results.data.output)
                 switch(output.statusCode){
                     case 500:
-                        alert(output.body.message);
-                        break;
+                        alert(output.body.message)
+                        break
                     case 200:
-                        alert('Game purchased');
-                        break;
+                        alert('Game purchased')
+                        break
                 }
             } else {
-                alert('Please select a game first');
+                alert('Please select a game first')
             }
         },
         closeList() {
-            this.$store.commit('setHostGameMode', 'getlist');
-            this.$store.commit('setUIMode', 'home');
+            const gameStore = useGameStore()
+            gameStore.admin.hostgames.mode ='getlist'
+            gameStore.uimode = 'home'
         },
     },
     computed: {
-        adminmode: function() {return this.$store.state.adminmode},
-        gamelist: function() {return this.$store.state.admin.gamelist;},
-        username: function() {return this.$store.state.user.username;},
-        gethostbutton: function() {if(this.question==0){return "Start Quiz";} else {return "Next Question";}},
-        game: function() {return this.$store.state.admin.game;},
-        myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken }
+        adminmode: function() {
+            const gameStore = useGameStore()
+            return gameStore.adminmode},
+        gamelist: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.gamelist},
+        username: function() {
+            const gameStore = useGameStore()
+            return gameStore.user.username},
+        game: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.game;},
+        myjwt: function() { 
+            const gameStore = useGameStore()
+            return gameStore.user.cognito.idToken.jwtToken }
     }
-}
+})
 </script>

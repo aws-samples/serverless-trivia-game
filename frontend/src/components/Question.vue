@@ -16,51 +16,51 @@
 <template>
     <div>
     <v-container>
-        <span v-if="showquestion">
-            <v-row class="headline" align="center" justify="center">
-                <v-toolbar color="primary" class="headline black--text">
-                    <v-toolbar-title>Question #: {{questionNumber+1}}</v-toolbar-title>
-                    <v-spacer></v-spacer>
-                    <v-toolbar-title>Quiz: {{quizname}}</v-toolbar-title> 
-                </v-toolbar>
-            </v-row><v-row>
-                <pre style="white-space: pre-wrap;" class="headline">{{ questions[questionNumber].question }}</pre>
-            </v-row>
-            <span v-if="multiplechoice" align="center" justify="center">
-                <v-row>
-                    <v-col v-if="multiplechoice" align="center" justify="center">
-                        <v-row class="mb-1"><v-col cols="12">
-                        <v-card v-if="questions[questionNumber].answerA != ''" outlined @click='answer(questionNumber, "A")' color="light-blue">
-                            <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerA }}</v-card-title>
-                        </v-card>
-                        </v-col></v-row>
-                        <v-row class="mb-1"><v-col cols="12">
-                        <v-card v-if="questions[questionNumber].answerB != ''" outlined @click='answer(questionNumber, "B")' color="yellow">
-                            <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerB }}</v-card-title>                
-                        </v-card>
-                        </v-col></v-row>
-                        <v-row class="mb-1"><v-col cols="12">
-                        <v-card v-if="questions[questionNumber].answerC != ''" outliined @click='answer(questionNumber, "C")' color="red">
-                            <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerC }}</v-card-title>
-                        </v-card>
-                        </v-col></v-row>
-                        <v-row class="mb-1"><v-col cols="12">
-                        <v-card v-if="questions[questionNumber].answerD != ''" outlined @click='answer(questionNumber, "D")' color="green">
-                            <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerD }}</v-card-title>
-                        </v-card>
-                        </v-col></v-row>
-                    </v-col>
-                </v-row>
-            </span>
-            <span v-else align="center" justify="center">
-                <v-row>
-                <v-text-field label="Response" v-model='responsetext' placeholder='Response'/>
-                </v-row><v-row class="mb-10">
-                <v-btn x-large block class="white--text" color="accent" v-on:click='answeropen(questionNumber)'>Answer</v-btn>
-                </v-row>
-            </span>
-        </span>
-        <span v-else>
+        <div v-if="showquestion">
+            <v-card>
+                <v-card-title>Question #{{questionNumber+1}}</v-card-title>
+                <v-card-subtitle>Quiz: {{quizname}}</v-card-subtitle>
+                <v-card-title>
+                        {{ questions[questionNumber].question }}
+                </v-card-title>
+                <v-card-text>
+                    <div v-if="multiplechoice" align="center" justify="center">
+                        <v-row>
+                            <v-col v-if="multiplechoice" align="center" justify="center">
+                                <v-row class="mb-1"><v-col cols="12">
+                                <v-card v-if="questions[questionNumber].answerA != ''" outlined @click='answer(questionNumber, "A")' color="light-blue">
+                                    <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerA }}</v-card-title>
+                                </v-card>
+                                </v-col></v-row>
+                                <v-row class="mb-1"><v-col cols="12">
+                                <v-card v-if="questions[questionNumber].answerB != ''" outlined @click='answer(questionNumber, "B")' color="yellow">
+                                    <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerB }}</v-card-title>                
+                                </v-card>
+                                </v-col></v-row>
+                                <v-row class="mb-1"><v-col cols="12">
+                                <v-card v-if="questions[questionNumber].answerC != ''" outliined @click='answer(questionNumber, "C")' color="red">
+                                    <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerC }}</v-card-title>
+                                </v-card>
+                                </v-col></v-row>
+                                <v-row class="mb-1"><v-col cols="12">
+                                <v-card v-if="questions[questionNumber].answerD != ''" outlined @click='answer(questionNumber, "D")' color="green">
+                                    <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerD }}</v-card-title>
+                                </v-card>
+                                </v-col></v-row>
+                            </v-col>
+                        </v-row>
+                    </div>
+                    <div v-else align="center" justify="center">
+                        <v-row>
+                        <v-text-field label="Response" v-model='responsetext' placeholder='Response'/>
+                        </v-row><v-row class="mb-10">
+                        <v-btn x-large block class="white--text" color="#00FFFF" v-on:click='answeropen(questionNumber)'>Answer</v-btn>
+                        </v-row>
+                    </div>
+                </v-card-text>
+            </v-card>
+        </div>
+        <div v-else>
             <v-row class="headline" align="center" justify="center">
                 <v-toolbar color="primary" class="headline black--text">
                     <v-toolbar-title>Answerboard</v-toolbar-title>
@@ -68,8 +68,9 @@
                     <v-toolbar-title>Quiz: {{quizname}}</v-toolbar-title> 
                 </v-toolbar>
             </v-row>
-            <v-row align="center" justify="center">
-                <v-data-table
+            <v-row class="mb-6" align="center" justify="center">
+           
+<!--                 <v-data-table
                     :headers="boardheaders"
                     :items="answerboard"
                     item-key="questionNumber"
@@ -87,20 +88,59 @@
                             <td>{{props.item.alternatives}}</td>
                         </tr>
                     </template>
-                </v-data-table>
+                </v-data-table> -->
+                    <v-table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">
+                                    Question #
+                                </th>
+                                <th class="text-left">
+                                    Question
+                                </th>
+                                <th class="text-left">
+                                    Correct Answer
+                                </th>
+                                <th class="text-left">
+                                    Your Answer
+                                </th>
+                                <th class="text-left">
+                                    Follow Up
+                                </th>
+                                <th class="text-left">
+                                    Alternatives
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="answer in answerboard"
+                                :key="answer.questionNumber"
+                            >
+                                <td>{{ answer.questionNumber }}</td>
+                                <td>{{ answer.question }}</td>
+                                <td>{{ answer.answer }}</td>
+                                <td>{{ answer.playerResponse }}</td>
+                                <td>{{ answer.answerFollowup }}</td>
+                                <td>{{ answer.alternatives }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table>
             </v-row>
-            <v-row v-if='showscoreboardbutton' class="mb-10">
-                <v-btn x-large block class="white--text" color="accent" v-on:click='getscoreboard'>Show Scoreboard</v-btn>
+            <v-row v-if='showscoreboardbutton' class="mb-6">
+                <v-btn x-large block class="white--text" color="#00FFFF" v-on:click='getscoreboard'>Show Scoreboard</v-btn>
             </v-row>
-        </span>
+        </div>
     </v-container>
     </div>
 </template>
 
 <script>
-import DataService from '@/services/DataServices';
+import { defineComponent } from 'vue'
+import { DataService } from '@/services/DataServices.js'
+import { useGameStore } from '@/stores/game.js'
 
-export default {
+export default defineComponent({
     name: 'Question',
     props: {
         start: Boolean
@@ -108,14 +148,29 @@ export default {
     mounted() {
     },
     computed: {
-        availableQuestions: function() { return this.$store.state.game.numberofquestions },
-        questions: function() { return this.$store.state.game.questions },
-        multiplechoice: function() { return this.$store.state.game.questionType === 'Multiple Choice' },
-        quizmode: function() {return 'Single Player';},
-        quizname: function() { return this.$store.state.game.quizName },
-        gameid: function() { return this.$store.state.game.gameId},
-        username: function() { return this.$store.state.user.username },
-        myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken }
+        availableQuestions: function() {
+            const gameStore = useGameStore()
+            return gameStore.game.numberofquestions },
+        questions: function() { 
+            const gameStore = useGameStore()
+            return gameStore.game.questions },
+        multiplechoice: function() { 
+            const gameStore = useGameStore()
+            return gameStore.game.questionType === 'Multiple Choice' },
+        quizmode: function() {
+            return 'Single Player'},
+        quizname: function() { 
+            const gameStore = useGameStore()
+            return gameStore.game.quizName },
+        gameid: function() { 
+            const gameStore = useGameStore()
+            return gameStore.game.gameId},
+        username: function() { 
+            const gameStore = useGameStore()
+            return gameStore.user.username },
+        myjwt: function() { 
+            const gameStore = useGameStore()
+            return gameStore.user.cognito.idToken.jwtToken }
     },
 
     data: function() { 
@@ -183,16 +238,17 @@ export default {
         },
 
         async getscoreboard() {
+            const gameStore = useGameStore()
             let parms = {gameId: this.gameid};
             let response = await this.getscoreboarddata(parms)
-            this.$store.commit('setSystemChat', 'Showing Scoreboard');
-            this.$store.commit('setScoreboard', response.data);
-            this.$store.commit('setGameState', 'scoreboard');
+            gameStore.system.unshift('Showing Scoreboard' + "\r\n")
+            gameStore.scoreboard.players = response.data
+            gameStore.gamemode = 'scoreboard'
             this.showquestion = true;
             this.showscoreboardbutton = false;
         }
     }
-}
+})
 </script>
 
  

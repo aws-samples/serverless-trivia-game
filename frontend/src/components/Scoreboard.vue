@@ -15,15 +15,14 @@
 
 <template>
     <v-container v-if="quizname!=''">
-        <v-row>
-            <v-toolbar color="primary" class="headline black--text">
+        <v-row class="mb-3">
+            <v-toolbar align="center" color="primary" class="headline black--text">
                 <v-spacer></v-spacer>
                 <v-toolbar-title>Scoreboard for Quiz: {{quizname}}</v-toolbar-title>
-                <v-spacer></v-spacer>
             </v-toolbar>
         </v-row>
-        <v-row align="center" justify="center">
-            <v-data-table
+        <v-row align="center" justify="center" class="mb-6">
+<!--             <v-data-table
                 :headers="headers"
                 :items="scoreboard">
                 <template v-slot:item="props">
@@ -38,13 +37,40 @@
                         <td>{{props.item.Score}}</td>
                     </tr>
                 </template>
-            </v-data-table>
+            </v-data-table> -->
+            <v-table>
+                <thead>
+                    <tr>
+                        <th class="text-left">
+                            Position
+                        </th>
+                        <th class="text-left">
+                            Player Name
+                        </th>
+                        <th class="text-left">
+                            Score
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr
+                        v-for="player in scoreboard"
+                        :key="player.Position"
+                    >
+                        <td>{{ player.Position }}</td>
+                        <td>{{ player.playerName }}</td>
+                        <td>{{ player.Score }}</td>
+                    </tr>
+                </tbody>
+            </v-table>
+
         </v-row>
+        <v-row class="mb-6"></v-row>
         <v-row class="mb-6">
-            <v-btn x-large block color='accent' class="white--text" v-on:click='$emit("close-me")'>Close</v-btn>
+            <v-btn x-large block color='#00FFFF' class="white--text" v-on:click='$emit("close-me")'>Close</v-btn>
         </v-row>
     </v-container>
-    <v-container v-else>
+<!--     <v-container v-else>
         <v-toolbar color="primary" class="headline black--text">
             <v-spacer></v-spacer>
             <v-toolbar-title>Select a Game to See Scoreboard</v-toolbar-title>
@@ -86,14 +112,16 @@
                 <v-btn x-large block color='accent' class="white--text" v-on:click='$emit("close-me")'>Close</v-btn>
             </v-row>
         </v-card>
-    </v-container>
+    </v-container> -->
 </template>
 
 <script>
-import DataService from '@/services/DataServices';
-import axios from 'axios';
+import { defineComponent } from 'vue'
+import { DataService } from '@/services/DataServices.js'
+import { axios } from 'axios'
+import { useGameStore } from '@/stores/game.js'
 
-export default {
+export default defineComponent({
     name: 'Scoreboard',
 
     data: function() {return {
@@ -108,20 +136,31 @@ export default {
     };},
     
     computed: {
-        scoreboard: function() { return this.$store.state.scoreboard.players; } ,
-        quizname: function() { return this.$store.state.game.quizName; },
-        gamelist: function() {return this.$store.state.games.gamelist;},
-        username: function() { return this.$store.state.user.username; },
-        myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken; }
+        scoreboard: function() { 
+            const gameStore = useGameStore()
+            return gameStore.scoreboard.players } ,
+        quizname: function() { 
+            const gameStore = useGameStore()
+            return gameStore.game.quizName },
+        gamelist: function() {
+            const gameStore = useGameStore()
+            return gameStore.games.gamelist },
+        username: function() { 
+            const gameStore = useGameStore()
+            return gameStore.user.username },
+        myjwt: function() { 
+            const gameStore = useGameStore()
+            return gameStore.user.cognito.idToken.jwtToken; }
     },
 
     methods: {
         async getscoreboard(game) {
+            const gameStore = useGameStore()
             let data = {gameId: game.gameId, quizName: game.quizName, playerName: this.username, jwt: this.myjwt};
             let results = await DataService.getScoreboard(data);
-            this.$store.commit('setQuizName', game.quizName);
-            this.$store.commit('setScoreboard', results.data);
-            this.$store.commit('setGameState', 'scoreboard');
+            gameStore.game.quizName = game.quizName
+            gameStore.scoreboard.players = results.data
+            gameStore.gamemode = 'scoreboard'
         }, 
         async checkFile(file) {
             axios.get(file)
@@ -137,6 +176,6 @@ export default {
         }
         
     }
-};
+})
 </script>
 

@@ -23,6 +23,8 @@
             </v-toolbar>            
             <v-card>
                 <v-card-title>Game Listing<v-spacer></v-spacer>
+                <v-row class="mb-6"></v-row>
+                <v-row class="mb-9">
                     <v-text-field
                         v-model="search"
                         append-icon="mdi-magnify"
@@ -30,9 +32,10 @@
                         single-line
                         hide-details
                     ></v-text-field>
+                </v-row>
                 </v-card-title>
-                <v-row align="center" justify="center">
-                    <v-data-table
+                <v-row align="center" justify="center" class="mb-9">
+<!--                     <v-data-table
                         :headers="gameheaders"
                         :items="gamelist"
                         item-key="gameId"
@@ -49,19 +52,57 @@
                                 <td>{{props.item.questionType}}</td>
                             </tr>
                         </template>
-                    </v-data-table>
+                    </v-data-table> -->
+                    <v-card>
+                        <v-row class="mb-6">
+                            <v-table>
+                                <thead>
+                                    <tr>
+                                        <th class="text-left">
+                                            Quiz Name
+                                        </th>
+                                        <th class="text-left">
+                                            Quiz Description
+                                        </th>
+                                        <th class="text-left">
+                                            Quiz Mode
+                                        </th>
+                                        <th class="text-left">
+                                            Question Type
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="nogames"><td><b>You have no games</b></td></tr>
+                                    <tr
+                                        v-for="game in gamelist"
+                                        :key="game.gameId"
+                                        @click="hostGame(game)"
+                                    >
+                                        <td>{{ game.quizName }}</td>
+                                        <td>{{ game.quizDescription }}</td>
+                                        <td>{{ game.quizMode }}</td>
+                                        <td>{{ game.questionType }}</td>
+                                    </tr>
+                                </tbody>
+                            </v-table>
+                        </v-row>
+                    </v-card>
                 </v-row>
             </v-card>
-            <v-btn x-large block color="accent" class="white--text" v-on:click="closelist">Close List</v-btn>
+            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="closelist">Close List</v-btn>
         </span>
     </div>
 </template>
 
 <script>
-import DataService from '@/services/DataServices';
+import { defineComponent } from 'vue'
+import { DataService } from '@/services/DataServices.js'
+import { useGameStore } from '@/stores/game.js'
 
-export default {
+export default defineComponent ({
     name: 'Hostgame',
+    emits: ['send-message', 'send-iot-message', 'subscribe-iot-topic'],
     data: function() { return {
         quizName: '',
         quizCode: '',
@@ -76,34 +117,36 @@ export default {
     }},
     methods: {
         async hostGame(game) {
+            const gameStore = useGameStore()
             if(game.quizMode==='Single Player'){
                 let message = {playerName: this.username, quizName: game.quizName, gameId: game.gameId, 
                     questionType: game.questionType, quizMode: game.quizMode, quizDescription: game.quizDescription,
                     starttime: String(new Date()), category: game.category};
-                let response = await this.host(message);
+                let response = await this.host(message)
                 if(response.data.gameId === game.gameId) {
-                    alert('Game ' + game.quizName + ' is now being run');
+                    alert('Game ' + game.quizName + ' is now being run')
                 }
             } else if(game.quizMode.includes('Casual')||game.quizMode.includes('Competitive')){
                 let message = {message: 'liveadmin', data: {
                     subaction: 'hostgame', playerName: this.username, quizName: game.quizName, 
                     gameId: game.gameId, questionType: game.questionType, quizMode: game.quizMode, 
                     starttime: String(new Date()), channel: 'globalchat', category: game.category
-                }};
-                this.$emit('send-message', JSON.stringify(message));
-                let results = await DataService.getFullGame({gameId: game.gameId, playerName: this.username, jwt: this.myjwt});
-                this.$store.commit('setHostGameMode', 'getlist');
-                this.$store.commit('setLiveAdminLive', true);
-                this.$store.commit('setLiveAdminUIMode', 'lobby');
-                this.$store.commit('setLiveAdminQuestions', results.data.questions);
-                this.$store.commit('setLiveAdminQuizName', results.data.quizName);
-                this.$store.commit('setLiveAdminGameId', results.data.gameId);
-                this.$store.commit('setLiveAdminGameType', results.data.quizMode);
-                this.$store.commit('setLiveAdminQuestionType', results.data.questionType);
+                }}
+                this.$emit('send-message', JSON.stringify(message))
+                let results = await DataService.getFullGame({gameId: game.gameId, playerName: this.username, jwt: this.myjwt})
+                gameStore.admin.hostgames.mode = 'getlist'
+                gameStore.live.admin.live = true
+                gameStore.live.admin.uimode = 'lobby'
+                gameStore.live.admin.questions = results.data.questions
+                gameStore.live.admin.quizName = results.data.quizName
+                gameStore.live.admin.gameId = results.data.gameId
+                gameStore.live.admin.gameType = results.data.quizMode
+                gameStore.live.admin.questionType = results.data.questionType
             } else {
-                this.$store.commit('setBlitzPlayerGameOver', false);
-                this.$store.commit('setAdminLiveGameKey', `${game.gameId}:${this.username}`);
-                this.$store.commit('setAdminLiveBlitzQuestion', '');
+                gameStore.live.blitz.gameOver = false
+                gameStore.live.admin.gameKey = `${game.gameId}:${this.username}`
+                console.log(`current value of gameKey = ${gameStore.live.admin.gameKey}`)
+                gameStore.live.admin.question = ''
                 this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/questionlist`);
                 this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/question`);
                 this.$emit('subscribe-iot-topic', `games/${this.liveAdminGameKey}/join/+`);
@@ -117,8 +160,8 @@ export default {
                     gameId: game.gameId, questionType: game.questionType, 
                     quizMode: game.quizMode, starttime: `${String(new Date())}`, category: game.category};
                 this.$emit('send-iot-message', 'hostgame', JSON.stringify(message));
-                this.$store.commit('setAdminLiveBlitzMode', true);
-                this.$store.commit('setLiveAdminUIMode', 'lobby');
+                gameStore.live.admin.blitz = true
+                gameStore.live.admin.uimode = 'lobby'
             }
         },
         async host(parms){
@@ -126,17 +169,34 @@ export default {
             return DataService.hostGame(parms);
         },
         closelist: function() {
-            this.$store.commit('setHostGameMode', 'getlist');
-            this.$store.commit('setUIMode', 'home');
+            const gameStore = useGameStore()
+            gameStore.admin.hostgames.mode = 'getlist'
+            gameStore.uimode = 'home'
         },
     },
     computed: {
-        getMode: function() {return this.$store.state.admin.hostgames.mode;},
-        gamelist: function() {return this.$store.state.admin.hostgames.gamelist;},
-        username: function() {return this.$store.state.user.username;},
-        gethostbutton: function() {if(this.question==0){return "Start Quiz";} else {return "Next Question";}},
-        myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken },
-        liveAdminGameKey: function() {return this.$store.state.live.admin.gameKey;}
+        getMode: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.hostgames.mode},
+        gamelist: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.hostgames.gamelist},
+        username: function() {
+            const gameStore = useGameStore()
+            return gameStore.user.username},
+        gethostbutton: function() {
+            if(this.question==0){return "Start Quiz"} else {return "Next Question"}},
+        myjwt: function() {
+            const gameStore = useGameStore()
+            return gameStore.user.cognito.idToken.jwtToken },
+        liveAdminGameKey: function() {
+            const gameStore = useGameStore()
+            console.log(`I see ${gameStore.live.admin.gameKey}`)
+            return gameStore.live.admin.gameKey },
+        nogames: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.hostgames.gamelist.length === 0
+        }
     }
-}
+})
 </script>

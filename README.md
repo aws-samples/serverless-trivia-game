@@ -25,8 +25,8 @@ Important: this application uses various AWS services and there are costs associ
 2. [AWS CLI v1.19.112 installed](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) and [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) with Admin privileges
 3. [AWS SAM CLI v1.33 installed](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
 4. [AWS CDK v1.57.0 installed](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html#getting_started_install)
-5. [NodeJS v14.x installed](https://nodejs.org/en/download/package-manager/)
-6. [Vue.js and Vue CLI (v. 4.5.15) installed](https://vuejs.org/v2/guide/installation.html)
+5. [NodeJS v16.14.x or higher installed](https://nodejs.org/en/download/package-manager/)
+6. [Vue.js (v.3) and Vue CLI (v. 5) installed](https://blog.vuejs.org/posts/vue-3-as-the-new-default.html)
 7. [Create an IoT Endpoint in your account](https://docs.aws.amazon.com/iot/latest/developerguide/setting-up.html#iot-console-signin)
 8. Optional [AWS Amplify installed and configured to access the account you are using](https://docs.amplify.aws/cli/start/install)
 
@@ -67,6 +67,8 @@ This set of steps will deploy a number of AWS resources to your account, includi
 
 ### Frontend Setup
 
+#### Note about the front end: There are many changes that needed to occur for security patching, including an upgrade to Vue3 and the use of Vuetify 3 Beta. As such, some features may appear different than in the prior release. As Vuetify continues their release, this repo will be updated to bring the UI in line with the prior version.
+
 These steps will configure the Qwizardly UI to utilize the features deployed during the Backend Setup.
 
 1. Navigate to the serverless-trivia-game/frontend directory.
@@ -74,12 +76,14 @@ These steps will configure the Qwizardly UI to utilize the features deployed dur
 3. Edit the file src/services/AWSConfig.js.  Add the values for your endpoints and region that you copied from the backend setup and save the file.
 ![Image of AWSConfig.js file](images/awsconfig.png)
 > **Note:** These values are from steps 3 and 8 in the Backend Setup section.
-4. Run the command `npm run serve` to run the webapp locally.
-> **Note:** The avatar notification relies on service workers that are activated only in production build. To run this locally use the following steps instead of 4.
+4. Run the command `npm run dev` to run the webapp locally.
+> **Note:** The avatar notification relies on service workers that are activated only in production build. To run this locally use the following steps instead of 4. This functionality is not in the current build and will be enabled in a future build.
 >   1. Run the command `npm install -g serve`
 >   2. Run the command `npm run build` to create a production build for the frontend in the dist/ folder
 >   3. Run the command `serve -s -p 8080 dist/` to run the webapp locally on port 8080
 5. Once the app is running, navigate to http://localhost:8080 to use the Simple Trivia Service frontend.
+
+### Note: Amplify Hosting has not been fully tested with this build and will be validated. These steps should continue to work but your mileage may vary.
 
 ### Optional: Host the Simple Trivia Service frontend using Amplify
 

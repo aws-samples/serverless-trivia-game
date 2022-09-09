@@ -1,77 +1,36 @@
 {
-  "name": "stsui",
-  "version": "0.1.0",
-  "private": true,
+  "name": "frontend",
+  "version": "0.0.0",
   "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "serve": "vite preview",
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview --port 4173"
   },
   "dependencies": {
-    "@aws-amplify/ui-components": "^1.3.0",
-    "@aws-amplify/ui-vue": "^1.0.8",
-    "@intervolga/optimize-cssnano-plugin": "^1.0.6",
-    "@vue/component-compiler-utils": "^3.2.0",
-    "amazon-cognito-identity-js": "^4.6.0",
-    "aws-amplify": "^4.3.8",
-    "aws-iot-device-sdk": "^2.2.6",
-    "aws-sdk": "^2.881.0",
-    "axios": "^0.21.1",
-    "core-js": "^2.6.12",
-    "css-declaration-sorter": "^6.0.3",
-    "css-loader": "^5.2.4",
-    "cssnano": "^5.0.2",
-    "cssnano-preset-default": "^5.0.1",
-    "cssnano-util-raw-cache": "^4.0.1",
-    "highlight.js": "^10.7.2",
-    "is-svg": "^4.3.1",
-    "postcss": "^8.2.15",
-    "register-service-worker": "^1.7.1",
-    "ssri": "^8.0.1",
-    "vue": "^2.6.11",
-    "vue-loader": "^15.9.7",
-    "vue-meta": "^2.4.0",
-    "vuetify": "^2.4.9",
-    "vuex": "^3.6.2",
-    "y18n": "^5.0.6"
+    "@esbuild-plugins/node-globals-polyfill": "^0.1.1",
+    "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
+    "@mdi/font": "5.9.55",
+    "amazon-cognito-identity-js": "^5.2.10",
+    "aws-amplify": "^4.3.33",
+    "aws-iot-device-sdk": "^2.2.12",
+    "aws-sdk": "^2.1204.0",
+    "axios": "^0.27.2",
+    "buffer": "^6.0.3",
+    "pinia": "^2.0.17",
+    "roboto-fontface": "*",
+    "vue": "^3.2.37",
+    "vuetify": "^3.0.0-beta.0",
+    "webfontloader": "^1.0.0"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^3.3.0",
-    "@vue/cli-plugin-eslint": "^4.5.15",
-    "@vue/cli-plugin-pwa": "^4.5.12",
-    "@vue/cli-service": "^4.5.15",
-    "babel-eslint": "^10.1.0",
-    "eslint": "^7.0.0",
-    "eslint-plugin-vue": "^7.0.0",
-    "sass": "^1.32.8",
-    "sass-loader": "^8.0.0",
-    "vue-cli-plugin-vuetify": "^2.0.9",
-    "vue-template-compiler": "^2.6.11",
-    "vuetify-loader": "^1.7.2"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "extends": [
-      "plugin:vue/essential",
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "parser": "babel-eslint"
-    },
-    "rules": {}
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not dead"
-  ],
-  "repository": {
-    "type": "git",
-    "url": ""
-  },
-  "author": "Tim Bruce",
-  "license": "MIT"
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^11.1.1",
+    "@vitejs/plugin-vue": "^3.0.3",
+    "vite": "^3.0.8",
+    "vite-plugin-vuetify": "^1.0.0-alpha.12",
+    "vue-cli-plugin-vuetify": "~2.5.5",
+    "webpack-cli": "^4.10.0",
+    "webpack-plugin-vuetify": "^2.0.0-alpha.0"
+  }
 }

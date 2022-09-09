@@ -19,7 +19,9 @@
 </template>
 
 <script>
-export default {
+import { defineComponent } from 'vue'
+
+export default defineComponent({
     name: 'GlobalChat',
     data: function() { return {
         readonly: true,
@@ -28,5 +30,5 @@ export default {
     props: {
             data: Array
         }
-}
+})
 </script>

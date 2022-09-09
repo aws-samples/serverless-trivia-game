@@ -19,11 +19,17 @@
             <v-toolbar color="primary" class="headline black--text">
                 <v-toolbar-title>Game Info</v-toolbar-title>
                 <v-spacer></v-spacer>
-            </v-toolbar>            
-            <v-row>Quiz Name: {{quizName}}</v-row>
-            <v-row>Question Type: {{questionType}}</v-row>
-            <v-row>Quiz Mode: {{quizMode}}</v-row>
-            <v-card-title>Question Listing<v-spacer></v-spacer>
+            </v-toolbar>
+            <v-row class="mb-6"></v-row>
+            <v-card>
+                <v-card-text>
+                    <v-row class="mb-3">Quiz Name: {{quizName}}</v-row>
+                    <v-row class="mb-3">Question Type: {{questionType}}</v-row>
+                    <v-row class="mb-3">Quiz Mode: {{quizMode}}</v-row>
+                </v-card-text>
+            
+ <!-- Revive when v-data-table is added to Vuetify Beta 
+                <v-card-title>Question Listing<v-spacer></v-spacer>
                 <v-text-field
                     v-model="search"
                     append-icon="mdi-magnify"
@@ -49,9 +55,42 @@
                         </tr>
                     </template>
                 </v-data-table>
+            </v-row> -->
+            <v-row>
+                <v-col cols="3"></v-col><v-col cols="6">
+
+                <v-row>
+                    <v-table width="100%">
+                        <thead>
+                            <tr>
+                                <th class="text-left">
+                                    #
+                                </th>
+                                <th class="text-left">
+                                    Question
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="noquestions"><td><b>No questions in game</b></td></tr>
+                            <tr
+                                v-for="question in questions"
+                                :key="question.questionNumber"
+                                @click="editQuestion(question)"
+                            >
+                                <td align="left">{{ question.questionNumber }}</td>
+                                <td align="left">{{ question.question }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                </v-row>
+                <v-col cols="3"></v-col>
+            </v-col>
             </v-row>
-            <v-row class="mb-2"></v-row>
+            </v-card>
+            <v-row class="mb-9"></v-row>
             <span v-if="showquestion">
+                <v-card>
                 <v-row>
                     <v-alert v-model="error" dismissible type="error" style="error">{{errortext}}</v-alert>
                 </v-row>
@@ -82,7 +121,7 @@
                     <v-row>
                         <v-text-field label="Answer" v-model="correctAnswer" placeholder="Answer"/>
                     </v-row>
-                    <v-row>
+                    <v-row class="mb-3">
                         <v-combobox v-model="alternatives" label="Alternative Answers" multiple chips></v-combobox>
                     </v-row>
                     <v-row>
@@ -93,20 +132,20 @@
                         <v-text-field label="Answer Followup" v-model="answerFollowup" placeholder="Extra text to follow up on answer"/>
                     </v-row>
                 </span>
-            <v-row class="mb-2"><v-btn x-large block color="accent" class="white--text" v-on:click="saveQuestion">Save Question</v-btn></v-row>
-            <v-row class="mb-2"><v-btn x-large block color="accent" class="white--text" v-on:click="cancel">Cancel</v-btn></v-row>
+            <v-row class="mb-6"><v-btn x-large block color="#00FFFF" class="white--text" v-on:click="saveQuestion">Save Question</v-btn></v-row>
+            <v-row class="mb-6"><v-btn x-large block color="#00FFFF" class="white--text" v-on:click="cancel">Cancel</v-btn></v-row>
+            </v-card>
             </span>
             <span v-if="!showquestion">
-                <v-row class="mb-2"><v-btn x-large block color="accent" class="white--text" v-on:click="addQuestion">Add Question</v-btn></v-row>
-                <v-row></v-row>
-                <v-row class="mb-2"><v-btn x-large block color="accent" class="white--text" v-on:click="closequiz">Close Quiz</v-btn></v-row>
-                <v-row></v-row>
+                <v-row class="mb-6"><v-btn x-large block color="#00FFFF" class="white--text" v-on:click="addQuestion">Add Question</v-btn></v-row>
+                <v-row class="mb-6"><v-btn x-large block color="#00FFFF" class="white--text" v-on:click="closequiz">Close Quiz</v-btn></v-row>
             </span>
         </span>
     </div>
 </template>
 
 <script>
+import { useGameStore } from '@/stores/game.js'
 
 export default {
     name: 'QuizList',
@@ -133,111 +172,148 @@ export default {
         groups: [1,2,3,4,5,6,7,8,9,10],
 
     }},
+    emits:['save-question'],
     methods: {
         async editQuestion(question) {
-            this.questionNumber = question.questionNumber;
-            this.questionIndex = this.questionNumber -1;
-            this.showquestion=true;
-            this.questionText=this.questions[this.questionIndex].question;
-            this.answerA=this.questions[this.questionIndex].answerA;
-            this.answerB=this.questions[this.questionIndex].answerB;
-            this.answerC=this.questions[this.questionIndex].answerC;
-            this.answerD=this.questions[this.questionIndex].answerD;
-            this.correctAnswer=this.questions[this.questionIndex].correctAnswer;
-            this.alternatives=this.questions[this.questionIndex].alternatives;
-            this.questionGroup=this.questions[this.questionIndex].questionGroup;
-            this.answerFollowup=this.questions[this.questionIndex].answerFollowup;
+            this.questionNumber = question.questionNumber
+            this.questionIndex = this.questionNumber -1
+            this.showquestion=true
+            this.questionText=this.questions[this.questionIndex].question
+            this.answerA=this.questions[this.questionIndex].answerA
+            this.answerB=this.questions[this.questionIndex].answerB
+            this.answerC=this.questions[this.questionIndex].answerC
+            this.answerD=this.questions[this.questionIndex].answerD
+            this.correctAnswer=this.questions[this.questionIndex].correctAnswer
+            this.alternatives=this.questions[this.questionIndex].alternatives
+            this.questionGroup=this.questions[this.questionIndex].questionGroup
+            this.answerFollowup=this.questions[this.questionIndex].answerFollowup
         },
         closequiz() {
-            this.$store.commit('setHostGameMode', 'getlist');
-            this.$store.commit('setUIMode', 'home');
+            const gameStore = useGameStore()
+            gameStore.admin.hostgames.mode = 'getlist'
+            gameStore.uimode = 'home'
         },
         addQuestion() {
-            this.questionNumber = this.totalquestions + 1;
-            this.questionIndex = this.questionNumber - 1;
-            this.showquestion=true;
-            this.questionText='';
-            this.answerA='';
-            this.answerB='';
-            this.answerC='';
-            this.answerD='';
-            this.correctAnswer='';
-            this.alternatives=[];
-            this.answerFollowup='';
-            this.questionGroup=this.lastgroup;
+            this.questionNumber = this.totalquestions + 1
+            this.questionIndex = this.questionNumber - 1
+            this.showquestion=true
+            this.questionText=''
+            this.answerA=''
+            this.answerB=''
+            this.answerC=''
+            this.answerD=''
+            this.correctAnswer=''
+            this.alternatives=[]
+            this.answerFollowup=''
+            this.questionGroup=this.lastgroup
         },
         cancel() {
-            this.questionNumber = -1;
-            this.questionIndex = -1;
-            this.showquestion = false;
+            this.questionNumber = -1
+            this.questionIndex = -1
+            this.showquestion = false
         },
         async saveQuestion() {
-            this.errortext = '';
-            this.error = false;
+            const gameStore = useGameStore()
+            this.errortext = ''
+            this.error = false
             if(this.multiplechoice){
                 switch(this.correctAnswer){
                     case 'A':
                         if(this.answerA===''){
-                            this.errortext = 'Answer A must have an answer to be selected as the correct answer';
+                            this.errortext = 'Answer A must have an answer to be selected as the correct answer'
                         }
-                        break;
+                        break
                     case 'B':
                         if(this.answerB===''){
-                            this.errortext = 'Answer B must have an answer to be selected as the correct answer';
+                            this.errortext = 'Answer B must have an answer to be selected as the correct answer'
                         }
-                        break;
+                        break
                     case 'C':
                         if(this.answerC===''){
-                            this.errortext = 'Answer C must have an answer to be selected as the correct answer';
+                            this.errortext = 'Answer C must have an answer to be selected as the correct answer'
                         }
-                        break;
+                        break
                     case 'D':
                         if(this.answerD===''){
-                            this.errortext = 'Answer D must have an answer to be selected as the correct answer';
+                            this.errortext = 'Answer D must have an answer to be selected as the correct answer'
                         }
-                        break;
+                        break
                 }
             } else if(this.questionText===''){
-                this.errortext = 'Please enter question text';
+                this.errortext = 'Please enter question text'
             } else if(this.correctAnswer ===''){
-                this.errortext = 'Please enter/select the correct answer';
+                this.errortext = 'Please enter/select the correct answer'
             } else if(this.questionGroup<this.lastgroup) {
-                this.errortext = 'Current group cannot be before last group';
+                this.errortext = 'Current group cannot be before last group'
             }
             if((this.answerA==='' || this.answerB ==='') && this.multiplechoice && this.errortext ==='' ){
-                this.errortext = 'Multiple Choice Question must have at least A and B answers';
+                this.errortext = 'Multiple Choice Question must have at least A and B answers'
             } 
             if(this.errortext === '') {
                 let data = {gameId: this.game.gameId, quizname: this.game.quizName, question: this.questionText,
                     quizMode: this.game.quizMode, questionNumber: this.questionNumber, questionType: this.game.questionType,
                     answerA: this.answerA, answerB: this.answerB, answerC: this.answerC, answerD: this.answerD,
                     correctAnswer: this.correctAnswer, questionGroup: this.questionGroup, alternatives: this.alternatives,
-                    answerFollowup: this.answerFollowup, owner: this.game.owner};
-                this.$store.commit('updateAdminEditQuestion', data);
-                this.$emit("save-question", this.game.gameId, this.questionNumber, this.game.quizMode, this.game.questionType, this.questionText, this.answerA, this.answerB, this.answerC, this.answerD, this.correctAnswer, this.questionGroup, this.alternatives, this.answerFollowup);
-                this.showquestion=false;
-                this.questionNumber= -1;
-                this.questionIndex = -1;
+                    answerFollowup: this.answerFollowup, owner: this.game.owner}
+                const index = parseInt(data.questionNumber) - 1;
+                let replace = 0;
+                if(index<gameStore.admin.game.questions.length){
+                    replace = 1;
+                }
+                gameStore.admin.game.questions.splice(index,replace,data)
+                this.$emit("save-question", this.game.gameId, this.questionNumber, this.game.quizMode, this.game.questionType, this.questionText, this.answerA, this.answerB, this.answerC, this.answerD, this.correctAnswer, this.questionGroup, this.alternatives, this.answerFollowup)
+                this.showquestion=false
+                this.questionNumber= -1
+                this.questionIndex = -1
             } else {
-                this.error = true;
+                this.error = true
             }
         }
 
     },
     computed: {
-        adminmode: function() {return this.$store.state.adminmode},
-        gamelist: function() {return this.$store.state.admin.gamelist;},
-        username: function() {return this.$store.state.user.username;},
+        adminmode: function() {
+            const gameStore = useGameStore()
+            return gameStore.adminmode},
+        gamelist: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.gamelist},
+        username: function() {
+            const gameStore = useGameStore()
+            return gameStore.user.username},
         gethostbutton: function() {if(this.question==0){return "Start Quiz";} else {return "Next Question";}},
-        game: function() {return this.$store.state.admin.game;},
-        gameid: function() {return this.$store.state.admin.game.gameId},
-        quizName: function() {return this.$store.state.admin.game.quizName;},
-        questionType: function() {return this.$store.state.admin.game.questionType;},
-        quizMode: function() {return this.$store.state.admin.game.quizMode;},
-        questions: function() {return this.$store.state.admin.game.questions},
-        totalquestions: function() {return this.$store.state.admin.game.questions.length},
-        multiplechoice: function() {if(this.$store.state.admin.game.questionType==='Multiple Choice'){return true;}return false;},
-        lastgroup: function() {if(this.totalquestions>0){return this.$store.state.admin.game.questions[this.totalquestions - 1].questionGroup;} return 1;}
+        game: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.game;},
+        gameid: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.game.gameId},
+        quizName: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.game.quizName;},
+        questionType: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.game.questionType;},
+        quizMode: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.game.quizMode;},
+        questions: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.game.questions},
+        totalquestions: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.game.questions.length},
+        multiplechoice: function() {
+            const gameStore = useGameStore()
+            return (gameStore.admin.game.questionType==='Multiple Choice')},
+        lastgroup: function() {
+            const gameStore = useGameStore()
+            if(this.totalquestions>0)
+                {return gameStore.admin.game.questions[this.totalquestions - 1].questionGroup}
+                return 1},
+        noquestions: function() { 
+            return this.totalquestions == 0
+        }
     }
 }
 
