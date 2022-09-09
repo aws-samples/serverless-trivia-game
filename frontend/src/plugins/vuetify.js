@@ -1,50 +1,10 @@
-/*
-  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this
-  software and associated documentation files (the "Software"), to deal in the Software
-  without restriction, including without limitation the rights to use, copy, modify,
-  merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
-  permit persons to whom the Software is furnished to do so.
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-  PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
+// Styles
+import '@mdi/font/css/materialdesignicons.css'
+import 'vuetify/styles'
 
-import Vue from 'vue';
-import Vuetify from 'vuetify/lib';
+// Vuetify
+import { createVuetify } from 'vuetify'
 
-Vue.use(Vuetify);
-
-const vuetifyOpts = {
-    rtl: false,
-    theme: {
-      dark: true,
-      themes: {
-        dark: {
-          primary: '#FFD676',
-          accent: '#69559A',
-          secondary: '#323232', //'#FFC653',
-          success: '#4CAF50',
-          info: '#2196F3',
-          warning: '#FB8C00',
-          error: '#FF5252'
-        },
-        light: {
-          primary: '#FFD676',
-          accent: '#69559A',
-          secondary: '#FFC653',
-          success: '#4CAF50',
-          info: '#2196F3',
-          warning: '#FB8C00',
-          error: '#FF5252'
-        }
-      }
-    }
-  }
-
-const vuetify = new Vuetify(vuetifyOpts);
-
-export default vuetify;
+export default createVuetify(
+  // https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides
+)

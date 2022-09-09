@@ -22,7 +22,8 @@
                 <v-spacer></v-spacer>
                 </v-toolbar>
             </v-row>
-            <v-row>
+            <v-row class="mb-9"></v-row>
+            <v-row class="mb-6">
                 <v-alert v-model="error" dismissible type="error" style="error">{{errortext}}</v-alert>
             </v-row>
             <v-row v-if="mode==='Multiplayer - Competitive'">
@@ -52,7 +53,7 @@
                 <v-row>
                     <v-text-field label="Answer" v-model="correctAnswer" placeholder="Answer"/>
                 </v-row>
-                <v-row>
+                <v-row class="mb-3">
                     <v-combobox v-model="alternatives" label="Alternative Answers" multiple chips></v-combobox>
                 </v-row>
                 <v-row>
@@ -64,7 +65,7 @@
                 </v-row>
             </span>
             <v-row>
-                <v-btn color="accent" x-large block class="white--text" v-on:click='savequestions'>Save Question</v-btn>
+                <v-btn color="#00FFFF" x-large block class="white--text" v-on:click='savequestions'>Save Question</v-btn>
             </v-row>
 
     </v-container>

@@ -31,8 +31,8 @@
 </template>
 
 <script>
-import DataService from '@/services/DataServices';
-import Config from '@/services/AWSConfig';
+import { DataService } from '@/services/DataServices.js'
+import { AWSConfig } from '@/services/AWSConfig.js'
 
 export default {
 

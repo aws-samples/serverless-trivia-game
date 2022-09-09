@@ -22,7 +22,7 @@
                 <v-toolbar-title>{{quizname}}</v-toolbar-title>
             </v-toolbar>
             <v-row><v-col cols="4"><pre class="headline"># of questions:</pre></v-col><v-col><pre class="headline">{{questions}}</pre></v-col></v-row>            
-            <v-data-table
+<!--             <v-data-table
             :headers="lobbyheaders"
             :items="players"
             no-data-text="no players have joined yet">
@@ -31,8 +31,27 @@
                         <td>{{props.item.playerName}}</td>
                     </tr>
                 </template>
-            </v-data-table>
-            <v-btn x-large block color="accent" class="white--text" v-on:click="startgame">Start Game</v-btn>
+            </v-data-table> -->
+            <v-row>
+                <v-table>
+                    <thead>
+                        <tr>
+                            <th class="text-left">
+                                Player Name
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="player in players"
+                            :key="player.playerName"
+                        >
+                            <td>{{ player.playerName }}</td>
+                        </tr>
+                    </tbody>
+                </v-table>
+            </v-row>
+            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="startgame">Start Game</v-btn>
             <v-row class="mb-6"></v-row>
         </span>
         <span v-if="mode==='game'">
@@ -41,7 +60,7 @@
                 <v-spacer></v-spacer>
                 <v-toolbar-title>{{quizname}}</v-toolbar-title>
             </v-toolbar> 
-            <span v-if="question!=''">
+            <span v-if="question!=''" class="mb-3">
                 <v-row><v-col cols="4"><pre class="headline"># of questions:</pre></v-col><v-col><pre class="headline">{{questions}}</pre></v-col></v-row>
                 <v-row><v-col cols="4"><pre class="headline">Question #:</pre></v-col><v-col><pre style="white-space: pre-wrap;" class="headline">{{questionnumber}}</pre></v-col></v-row>
                 <v-row><v-col cols="4"><pre class="headline">Question:</pre></v-col><v-col><pre style="white-space: pre-wrap;" class="headline">{{question}}</pre></v-col></v-row>
@@ -50,7 +69,7 @@
                 <span v-if="hasfollowup"><v-row><v-col cols="4"><pre class="headline">Followup:</pre></v-col><v-col><pre class="headline">{{followup}}</pre></v-col></v-row></span>
                 <v-row><v-col cols="4"><pre class="headline">Responses:</pre></v-col><v-col><pre class="headline">{{responses}}</pre></v-col></v-row>
             </span>
-            <v-data-table
+<!--             <v-data-table
             :headers="scoreboardheaders"
             :items="players"
             dense
@@ -64,73 +83,142 @@
                         <td>{{props.item.answered}}</td>
                     </tr>
                 </template>
-            </v-data-table>
-            <v-btn x-large block color="accent" class="white--text" v-on:click="processstep">{{step}}</v-btn>
+            </v-data-table> -->
+            <v-row>
+                <v-col cols=3></v-col><v-col cols="6">
+                    <v-table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">
+                                    Player Name
+                                </th>
+                                <th class="text-left">
+                                    Score
+                                </th>
+                                <th class="text-left">
+                                    Answer
+                                </th>
+                                <th class="text-left">
+                                    Eval
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="player in players"
+                                :key="player.playerName"
+                            >
+                                <td>{{ player.playerName }}</td>
+                                <td>{{ player.score }}{{ addpercent }}</td>
+                                <td>{{ player.answers[holdindex ]}}</td>
+                                <td>{{ players.answered }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                </v-col>
+            </v-row>
+            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="processstep">{{step}}</v-btn>
             <v-row class="mb-6"></v-row>
         </span>
     </div>
 </template>
 
 <script>
-export default {
+import { defineComponent } from 'vue'
+import { useGameStore } from '@/stores/game.js'
+
+export default defineComponent({
     name: 'LiveGameAdminController',
     computed: {
-        questionlist: function() { return this.$store.state.live.admin.questions; },
-        quizname: function() { return this.$store.state.live.admin.quizName; },
-        gametype: function() { return this.$store.state.live.admin.gameType; },
-        questiontype: function() {return this.$store.state.live.admin.questionType; },
-        gameid: function() {return this.$store.state.live.admin.gameId; },
-        mode: function() {return this.$store.state.live.admin.uimode; },
-        players: function() {return this.$store.state.live.admin.players; },
-        questions: function() {return this.questionlist.length},
-        playeranswered: function() {return this.$store.state.live.admin.playeranswered; },
-        responses: function() {return this.$store.state.live.admin.responses},
-        questionnumber: function() {return this.$store.state.live.admin.questionnumber},
-        questionnumberindex: function() {return this.$store.state.live.admin.questionnumber-1},
-        nextquestion: function() { 
+        questionlist: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.admin.questions },
+        quizname: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.admin.quizName },
+        gametype: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.admin.gameType },
+        questiontype: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.questionType },
+        gameid: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.gameId },
+        mode: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.uimode },
+        players: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.players },
+        questions: function() {
+            const gameStore = useGameStore()
+            return this.questionlist.length },
+        playeranswered: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.playeranswered },
+        responses: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.responses },
+        questionnumber: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.questionnumber },
+        questionnumberindex: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.admin.questionnumber-1 },
+        nextquestion: function() {
+            const gameStore = useGameStore()
             if(this.questionnumber <= this.questions) {
-                return this.$store.state.live.admin.questions[this.questionnumberindex];
+                return gameStore.live.admin.questions[this.questionnumberindex]
             } 
-            return '';
+            return ''
         },
         currentquestion: function() {
+            const gameStore = useGameStore()
             if(this.questionnumber <= this.questions) {
-                return this.$store.state.live.admin.questions[this.questionnumberindex];
+                return gameStore.live.admin.questions[this.questionnumberindex]
             } 
-            return '';
+            return ''
         },
         questiongroup: function() {
+            const gameStore = useGameStore()
             if(this.questionnumber <= this.questions) {
-                return this.$store.state.live.admin.questions[this.questionnumberindex].questionGroup;
+                return gameStore.live.admin.questions[this.questionnumberindex].questionGroup
             } 
-            return '';
+            return ''
         },
         hasalternatives: function() {
+            const gameStore = useGameStore()
             if(this.questionnumber <= this.questions) {
-                return 'alternatives' in this.$store.state.live.admin.questions[this.questionnumberindex];
+                return 'alternatives' in gameStore.live.admin.questions[this.questionnumberindex]
             }
-            return false;
+            return false
         },
         alternatives: function() {
+            const gameStore = useGameStore()
             if(this.questionnumber <= this.questions && this.hasalternatives) {
-                return this.$store.state.live.admin.questions[this.questionnumberindex].alternatives;
+                return gameStore.live.admin.questions[this.questionnumberindex].alternatives
             } 
-            return [];
+            return []
         },
         hasfollowup: function() {
+            const gameStore = useGameStore()
             if(this.questionnumber <= this.questions)  {
-                return 'answerFollowup' in this.$store.state.live.admin.questions[this.questionnumberindex];
+                return 'answerFollowup' in gameStore.live.admin.questions[this.questionnumberindex]
             }
-            return false;
+            return false
         },
         answerfollowup: function() {
+            const gameStore = useGameStore()
             if(this.questionnumber <= this.questions && this.hasfollowup) {
-                return this.$store.state.live.admin.questions[this.questionnumberindex].answerFollowup;
+                return gameStore.live.admin.questions[this.questionnumberindex].answerFollowup
             }
             return ''
         },        
-        username: function() { return this.$store.state.user.username; },
-        addpercent: function() {if(this.stepmode==='final'){return '%'}return '';}
+        username: function() { 
+            const gameStore = useGameStore()
+            return gameStore.user.username; },
+        addpercent: function() {if(this.stepmode==='final'){return '%'}return ''}
     },
     data: function() { return {
         step:'',
@@ -151,8 +239,10 @@ export default {
         priorstep:'',
         groupquestions:[]
     }},
+    emits: ['send-message'],
     methods: {
         startgame: function() {
+            const gameStore = useGameStore()
             //setup player details
             this.players.forEach(player => {
                 this.playerdetails.username = player;
@@ -160,8 +250,8 @@ export default {
                 this.playerdetails.responses=[];
             })
             //trigger mode for game
-            this.$store.commit('setLiveAdminUIMode', 'game');
-            this.$store.commit('setLiveAdminQuestionNumber', 1);
+            gameStore.live.admin.uimode = 'game'
+            gameStore.live.admin.questionnumber = 1
             this.step = 'Ask Question ' + String(this.questionnumber);
             this.stepmode = 'ask';
             this.groupquestions=[];
@@ -323,11 +413,12 @@ export default {
         },
 
         advancequestionnumber: function() {
-            let tempqn = this.questionnumber + 1;
-            this.$store.commit('setLiveAdminQuestionNumber', tempqn);
+            const gameStore = useGameStore()
+            gameStore.live.admin.questionnumber = this.questionnumber + 1
         },
 
         buildquestion: function(index, includeanswer) {
+            const gameStore = useGameStore()
             if(index>this.questions-1) {
                 return ''
             }
@@ -361,8 +452,10 @@ export default {
                 }
             }
             //reset playsersanswered and update UI components for Admin
-            this.$store.commit('resetLiveAdminPlayerAnsweredFlag', '');
-            this.$store.commit('setLiveAdminPlayersAnswered',0);
+            for(let i=0; i<gameStore.live.admin.players.length; i++) {
+                gameStore.live.admin.players[i].answered = '';
+            }
+            gameStore.live.admin.responses = 0            
             this.question = this.questionlist[index].question;
             if(this.questiontype==='Multiple Choice') {
                 switch(this.questionlist[index].correctAnswer) {
@@ -392,6 +485,7 @@ export default {
             //trivia night, review question + answer
             //live trivia, show final scoreboard
             //find winnners
+            const gameStore = useGameStore()
             let i;
             let maxscore = 0;
             let winners = [];
@@ -425,10 +519,9 @@ export default {
             let scoreboardData = [];
             for(i=0;i<this.players.length;i++) {
                 let msg = {};
-                msg.score = (this.players[i].score / this.questions);
-                msg.playerIndex = i;
-                msg.flag = '';
-                this.$store.commit('setLiveAdminPlayerScore', msg);
+                gameStore.live.admin.players[i].score=((this.players[i].score / this.questions) * 100).toFixed(2)
+                gameStore.live.admin.players[i].answered=''
+                //now update locally for display to everyone
                 let scoreboardmsg = {};
                 scoreboardmsg.message = 'liveadmin';
                 scoreboardmsg.data = {};
@@ -438,11 +531,8 @@ export default {
                 scoreboardmsg.data.item.gameId = this.gameid;
                 scoreboardmsg.data.item.playerName = this.players[i].playerName;
                 scoreboardmsg.data.item.quizName = this.quizname;
-                scoreboardmsg.data.item.score = msg.score;
+                scoreboardmsg.data.item.score = gameStore.live.admin.players[i].score;
                 this.$emit('send-message', JSON.stringify(scoreboardmsg));
-                //now update locally for display to everyone
-                msg.score = (this.players[i].score * 100).toFixed(2);
-                this.$store.commit('setLiveAdminPlayerScore', msg);
             }
             this.stepmode='end';
             //save to table
@@ -479,6 +569,7 @@ export default {
 
         updatescoreboard: function(index) {
             //need the array position
+            const gameStore = useGameStore()
             let comparequestion = this.questionlist[index];
             let alternativefound;
             for(let i=0;i<this.players.length;i++){
@@ -519,7 +610,8 @@ export default {
                     quizMode: this.gametype, dateOfGame: this.dateString(), questions: questions};
                 let analyticsmessage = {message: 'liveadmin', data: {playerName: this.username, subaction:'analytics', analytics : analytics}};
                 this.$emit('send-message', JSON.stringify(analyticsmessage));
-                this.$store.commit('setLiveAdminPlayerScore', msg);
+                gameStore.live.admin.players[msg.playerIndex].score=msg.score;
+                gameStore.live.admin.players[msg.playerIndex].answered=msg.flag;
             }
         },
 
@@ -583,18 +675,19 @@ export default {
         },
 
         reset: function() {
-            this.$store.commit('setHostGameMode', 'getlist');
-            this.$store.commit('setLiveAdminLive', false);
-            this.$store.commit('setLiveAdminUIMode', '');
-            this.$store.commit('setLiveAdminQuestions',[]);
-            this.$store.commit('setLiveAdminQuizName','');
-            this.$store.commit('setLiveAdminGameId','');
-            this.$store.commit('setLiveAdminQuestionType','');
-            this.$store.commit('setLiveAdminGameType','');
-            this.$store.commit('setLiveAdminPlayersAnswered',0);
-            this.$store.commit('setLiveAdminPlayers',[]);
-            this.$store.commit('setUIMode','home');
+            const gameStore = useGameStore()
+            gameStore.admin.hostgames.mode = 'getlist'
+            gameStore.live.admin.live = false
+            gameStore.live.admin.uimode = ''
+            gameStore.live.admin.questions = []
+            gameStore.live.admin.quizName = ''
+            gameStore.live.admin.gameId = ''
+            gameStore.live.admin.questionType = ''
+            gameStore.live.admin.gameType = ''
+            gameStore.live.admin.responses = 0
+            gameStore.live.admin.players = []
+            gameStore.uimode = 'home'
         }
     }
-}
+})
 </script>

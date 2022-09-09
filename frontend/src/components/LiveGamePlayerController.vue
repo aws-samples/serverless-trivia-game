@@ -29,7 +29,7 @@
                 <v-spacer></v-spacer>
                 <v-toolbar-title>{{quizname}}</v-toolbar-title>
             </v-toolbar>
-            <v-data-table
+<!--             <v-data-table
             :headers="pregameheaders"
             :items="scoreboard"
             item-key="playerName"
@@ -41,7 +41,32 @@
                         <td>{{props.item.score}}</td>
                     </tr>
                 </template>
-            </v-data-table>
+            </v-data-table> -->
+            <v-row>
+                <v-col cols="3"></v-col><v-col cols="6">
+                    <v-table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">
+                                    Player Name
+                                </th>
+                                <th class="text-left">
+                                    Score
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="player in scoreboard"
+                                :key="player.playerName"
+                            >
+                                <td>{{ player.playerName }}</td>
+                                <td>{{ player.score }}</td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                </v-col>
+            </v-row>
             <v-row class="mb-6"></v-row>
          </v-container>
         <v-container v-if="mode==='question'">
@@ -50,7 +75,7 @@
                 <v-spacer></v-spacer>
                 <v-toolbar-title>{{quizname}}</v-toolbar-title>
             </v-toolbar>
-            <v-row></v-row>
+            <v-row class="mb-6"></v-row>
             <v-row class="headline">
                 <v-col cols="4"><pre class="headline">Question:</pre></v-col><v-col><pre style="white-space: pre-wrap;" class="headline">{{questiontext}}</pre></v-col>
             </v-row>
@@ -86,7 +111,7 @@
             <span v-else>
                 <v-col align="center" justify="center">
                     <v-text-field label="Response" v-model='responsetext' placeholder='Response'/>
-                    <v-btn x-large block class="white--text" color="accent" v-on:click='answeropen(questionnumber)'>Answer</v-btn>
+                    <v-btn x-large block class="white--text" color="#00FFFF" v-on:click='answeropen(questionnumber)'>Answer</v-btn>
                 </v-col>
                 <v-row class="mb-6"></v-row>
             </span>
@@ -97,7 +122,7 @@
                 <v-spacer></v-spacer>
                 <v-toolbar-title>{{quizname}}</v-toolbar-title>
             </v-toolbar>
-                <v-data-table
+<!--                 <v-data-table
                 :headers="respondedheaders"
                 :items="playersresponded"
                 item-key="index"
@@ -107,7 +132,28 @@
                             <td>{{props.item}}</td>
                         </tr>
                     </template>
-                </v-data-table>
+                </v-data-table> -->
+                <v-row>
+                    <v-col cols="3"></v-col><v-col cols="6">
+                        <v-table>
+                            <thead>
+                                <tr>
+                                    <th class="text-left">
+                                        Player Name
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="player in playersresponded"
+                                    :key="player.item"
+                                >
+                                    <td>{{ player.item }}</td>
+                                </tr>
+                            </tbody>
+                        </v-table>
+                    </v-col>
+                </v-row>
                 <v-row class="mb-6"></v-row>
         </span>
         <span v-if="mode==='scoreboard'">
@@ -118,10 +164,10 @@
                 <v-toolbar-title>{{quizname}}</v-toolbar-title>
             </v-toolbar>
             <span v-if="scoreboardnote!='noquestion' && scoreboardnote!='noquestionfinal'">
-                <v-row class="headline">
+                <v-row class="headline mb-6">
                     <v-col cols="4"><pre class="headline">Question:</pre></v-col><v-col><pre style="white-space: pre-wrap;" class="headline">{{questiontext}}</pre></v-col>
                 </v-row>
-                <v-row class="headline" align="center" justify="center">
+                <v-row class="mb-6" align="center" justify="center">
                     <v-col cols="4"><pre class="headline">Answer:</pre></v-col><v-col><pre class="headline">{{ correctanswer}}</pre></v-col>
                 </v-row>
                 <v-row v-if="hasalternatives">
@@ -132,7 +178,7 @@
                 </v-row>
             </span>
             <span v-if="scoreboardnote==='noquestionfinal'">
-                <v-data-table
+<!--                 <v-data-table
                 :headers="scoreboardheaders"
                 :items="scoreboard"
                 dense
@@ -145,10 +191,40 @@
                             <td>{{props.item.flag}}</td>
                         </tr>
                     </template> 
-                </v-data-table>
+                </v-data-table> -->
+                <v-row>
+                    <v-col cols="3"></v-col><v-col cols="6">
+                        <v-table>
+                            <thead>
+                                <tr>
+                                    <th class="text-left">
+                                        Player Name
+                                    </th>
+                                    <th class="text-left">
+                                        Score
+                                    </th>
+                                    <th class="text-left">
+                                        Responses
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="player in scoreboard"
+                                    :key="player.playerName"
+                                >
+                                    <td>{{ player.playerName }}</td>
+                                    <td>{{ player.score }}</td>
+                                    <td>{{ player.flag }}</td>                                
+                                </tr>
+                            </tbody>
+                        </v-table>
+                    </v-col>
+                </v-row>
+
             </span>
             <span v-else>
-                <v-data-table
+<!--                 <v-data-table
                 :headers="scoreboardheaders"
                 :items="scoreboard"
                 :sort-by="['score']"
@@ -161,7 +237,36 @@
                             <td>{{props.item.flag}}</td>
                         </tr>
                     </template> 
-                </v-data-table>
+                </v-data-table> -->
+                <v-row>
+                    <v-col cols="3"></v-col><v-col cols="6">
+                        <v-table>
+                            <thead>
+                                <tr>
+                                    <th class="text-left">
+                                        Player Name
+                                    </th>
+                                    <th class="text-left">
+                                        Score
+                                    </th>
+                                    <th class="text-left">
+                                        Responses
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="player in scoreboard"
+                                    :key="player.playerName"
+                                >
+                                    <td>{{ player.playerName }}</td>
+                                    <td>{{ player.score }}</td>
+                                    <td>{{ player.flag }}</td>                                
+                                </tr>
+                            </tbody>
+                        </v-table>
+                    </v-col>
+                </v-row>
             </span>
             <v-row class="mb-6"></v-row>
         </span>
@@ -171,7 +276,7 @@
                 <v-spacer></v-spacer>
                 <v-toolbar-title>{{quizname}}</v-toolbar-title>
             </v-toolbar>
-            <v-data-table
+<!--             <v-data-table
             :headers="answerboardheaders"
             :items="answerboard"
             dense
@@ -186,8 +291,47 @@
                         <td>{{props.item.answerFollowup}}</td>
                     </tr>
                 </template>
-            </v-data-table>
-            <v-row class="mb-6"></v-row>
+            </v-data-table> -->
+                <v-row>
+                    <v-col cols="3"></v-col><v-col cols="6">
+                        <v-table>
+                            <thead>
+                                <tr>
+                                    <th class="text-left">
+                                        Question #
+                                    </th>
+                                    <th class="text-left">
+                                        Question
+                                    </th>
+                                    <th class="text-left">
+                                        Answer
+                                    </th>
+                                    <th class="text-left">
+                                        Alternatives
+                                    </th>
+                                    <th class="text-left">
+                                        Followup
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="answer in answerboard"
+                                    :key="answer.questionNumber"
+                                >
+                                    <td>{{ answer.questionNumber }}</td>
+                                    <td>{{ answer.question }}</td>
+                                    <td v-if="answer.questionType==='Multiple Choice'">{{translate(answer)}}</td>
+                                    <td v-else>{{answer.correctAnswer}}</td>
+                                    <td>{{ answer.flag }}</td>
+                                    <td>{{ answer.answerFollowup }}</td>
+                                </tr>
+                            </tbody>
+                        </v-table>
+                    </v-col>
+                </v-row>
+
+        <v-row class="mb-6"></v-row>
         </span>
         <span v-if="mode==='end'">
             <v-toolbar color="primary" class="headline black--text">
@@ -201,40 +345,82 @@
 </template>
 
 <script>
-export default {
+import { defineComponent } from 'vue'
+import { useGameStore } from '@/stores/game.js'
+
+export default defineComponent({
     name: 'LiveGamePlayerController',
     computed: {
-        mode: function() {return this.$store.state.live.player.uimode;},
-        question: function() {return this.$store.state.live.player.question;},
-        questiontext: function() { return this.$store.state.live.player.question.question },
-        scoreboard: function() {return this.$store.state.live.player.scoreboard;},
-        username: function() {return this.$store.state.user.username;},
-        correctanswer: function() {return this.$store.state.live.player.answer; },
-        alternatives: function() {if(this.hasalternatives) {return this.$store.state.live.player.alternatives;} return ''; },
-        answerFollowup: function() { return this.$store.state.live.player.answerFollowup; },
-        playersresponded: function() {return this.$store.state.live.player.playersresponded; },
-        questiongroup: function() { return this.$store.state.live.player.questiongroup; },
-        answerboard: function() { return this.$store.state.live.player.answerboard; },
-        quizname: function() { return this.$store.state.live.player.quizname },
-        gameid: function() { return this.$store.state.live.player.gameid },
-        questionnumber: function() {return this.$store.state.live.player.question.questionNumber},
-        scoreboardnote: function() {return this.$store.state.live.player.scoreboardnote},
-        sortorder: function() {if(this.scoreboardnote==='noquestionfinal'){return false}return true;},
-        liveGameHost: function() { return this.$store.state.live.player.host; },
-        multiChoiceQuestionType: function() { if(Object.prototype.hasOwnProperty.call(this.question, 'answerA')){ return true;} return false; },
+        mode: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.player.uimode},
+        question: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.player.question;},
+        questiontext: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.player.question.question },
+        scoreboard: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.player.scoreboard;},
+        username: function() {
+            const gameStore = useGameStore()
+            return gameStore.user.username;},
+        correctanswer: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.player.answer },
+        alternatives: function() {
+            const gameStore = useGameStore()
+            if(this.hasalternatives) 
+                {return gameStore.live.player.alternatives}
+            return '' },
+        answerFollowup: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.player.answerFollowup },
+        playersresponded: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.player.playersresponded },
+        questiongroup: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.player.questiongroup },
+        answerboard: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.player.answerboard; },
+        quizname: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.player.quizname },
+        gameid: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.player.gameid },
+        questionnumber: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.player.question.questionNumber},
+        scoreboardnote: function() {
+            const gameStore = useGameStore()
+            return gameStore.live.player.scoreboardnote},
+        sortorder: function() {
+            return this.scoreboardnote!=='noquestionfinal'},
+        liveGameHost: function() { 
+            const gameStore = useGameStore()
+            return gameStore.live.player.host },
+        multiChoiceQuestionType: function() { 
+            if(Object.prototype.hasOwnProperty.call(this.question, 'answerA')){ return true} return false },
         hasalternatives: function() {
-            if(typeof this.$store.state.live.player.alternatives==='undefined'){
+            const gameStore = useGameStore()
+            if(typeof gameStore.live.player.alternatives==='undefined'){
                 return false;}
-            if(this.$store.state.live.player.alternatives.length>0){
+            if(gameStore.live.player.alternatives.length>0){
                 return true;}
             return false;
         },
         hasfollowup: function() {
-            if(this.$store.state.live.player.answerFollowup==='' || this.$store.state.live.player.answerFollowup==='undefined'){
+            const gameStore = useGameStore()
+            if(gameStore.live.player.answerFollowup==='' || gameStore.live.player.answerFollowup==='undefined'){
                 return false;}
             return true;
         }
     },
+    emits: ['send-message'],
     data: function() {return {
         responsetext:'',
         scoreboardheaders: [ { text: 'Player Name', align:'left', sortable:false, value:'Player Name'}, 
@@ -252,10 +438,11 @@ export default {
     }},
     methods: {
         answer: function(answer) {
+            const gameStore = useGameStore()
             let data = {playerName: this.username, gameId: this.gameid, hostname: this.liveGameHost,
                 questionNumber: this.question.questionNumber, response: answer, subaction: 'answered'};
             let msg = {message: 'liveplayer', data: data};
-            this.$store.commit('setLivePlayerUIMode', 'waiting');
+            gameStore.live.player.uimode = 'waiting'
             this.$emit('send-message', msg);
         },
         answeropen: function() {
@@ -282,5 +469,5 @@ export default {
         },
 
     }
-}
+})
 </script>

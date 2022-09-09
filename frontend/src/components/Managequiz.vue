@@ -31,17 +31,19 @@
             v-on:save-question="getNextQuestion">
         </QuizDetail>
 
-    </div>
+    7</div>
 </template>
 
 <script>
-import QuizList from './QuizList'
-import QuizHeader from './Quizheader';
-import QuizDetail from './Quizdetail';
-import QuizEdit from './QuizEdit';
-import DataService from '@/services/DataServices';
+import { defineComponent } from 'vue'
+import QuizList from './QuizList.vue'
+import QuizHeader from './Quizheader.vue'
+import QuizDetail from './Quizdetail.vue'
+import QuizEdit from './QuizEdit.vue'
+import { DataService } from '@/services/DataServices.js'
+import { useGameStore } from '@/stores/game.js'
 
-export default {
+export default defineComponent({
     name: 'Managequiz',
     components: {
         QuizHeader,
@@ -58,62 +60,72 @@ export default {
         questionNumber: 0
     }},
     computed: {
-        username: function() {return this.$store.state.user.username;},
-        adminmode: function() {return this.$store.state.adminmode},
-        gameid: function() {return this.$store.state.admin.newquiz.gameid},
-        myjwt: function() { return this.$store.state.user.cognito.idToken.jwtToken }
+        username: function() {
+            const gameStore = useGameStore()
+            return gameStore.user.username },
+        adminmode: function() {
+            const gameStore = useGameStore()
+            return gameStore.adminmode},
+        gameid: function() {
+            const gameStore = useGameStore()
+            return gameStore.admin.newquiz.gameid},
+        myjwt: function() { 
+            const gameStore = useGameStore()
+            return gameStore.user.cognito.idToken.jwtToken }
     },
     methods: {
         setMode(newmode) {
-            this.$store.commit('setAdminMode', newmode);
+            const gameStore = useGameStore()
+            gameStore.adminmode = newmode
         },
         async getQuestions(name, description, questions, type, mode, category) {
-            this.quizName = name;
-            this.quizDescription = description;
-            this.quizNumberOfQuestions = +questions;
-            this.questionType = type;
-            this.quizMode = mode;
-            this.quizCategory = category;
-            this.questionNumber = 1;
+            const gameStore = useGameStore()
+            this.quizName = name
+            this.quizDescription = description
+            this.quizNumberOfQuestions = +questions
+            this.questionType = type
+            this.quizMode = mode
+            this.quizCategory = category
+            this.questionNumber = 1
             //save the header as the first question to get the gameid
             let header = {pk: this.username, quizName: name, quizDescription: description, questionType: type,
-                quizMode: mode, playerName: this.username, usage: 'unlimited', category: this.quizCategory };
-            header.quizName = name;
-            let response = await this.saveHeader(header);
-            this.$store.commit('setGameId', response.data.gameid);
+                quizMode: mode, playerName: this.username, usage: 'unlimited', category: this.quizCategory }
+            header.quizName = name
+            let response = await this.saveHeader(header)
+            gameStore.admin.newquiz.gameid = response.data.gameid
             if(this.questionNumber<=this.quizNumberOfQuestions) {
                 this.setMode('showquestions');
             } else
             {
-                alert('You entered an invalid number of questions!');
+                alert('You entered an invalid number of questions!')
             }
         },
         async getNextQuestion(questiontext, answera, answerb, answerc, answerd, correctanswer, questiongroup, alternatives, answerfollowup) {
+            const gameStore = useGameStore()
             let question = {questionNumber: this.questionNumber, question: questiontext, 
-                correctAnswer: correctanswer, answerFollowup: answerfollowup, gameId: this.gameid };
-                question.questionNumber = this.questionNumber;
+                correctAnswer: correctanswer, answerFollowup: answerfollowup, gameId: this.gameid }
+                question.questionNumber = this.questionNumber
             if(this.questionType==='Multiple Choice') {
-                question.answerA = answera;
-                question.answerB = answerb;
-                question.answerC = answerc;
-                question.answerD = answerd;
+                question.answerA = answera
+                question.answerB = answerb
+                question.answerC = answerc
+                question.answerD = answerd
             }
             if(this.questionType==='Open Answer') {
-                question.alternatives = alternatives;
+                question.alternatives = alternatives
             }
             if(this.quizMode==='Multiplayer - Competitive') {
                 question.questionGroup = questiongroup
             }
-            //this.$emit("send-message", JSON.stringify({message:'savequestion', data: question}));
-            await this.saveQuestion(question);
-            this.questionNumber ++;
+            await this.saveQuestion(question)
+            this.questionNumber ++
             if(this.questionNumber<=this.quizNumberOfQuestions) {
-                this.setMode('showquestions');
+                this.setMode('showquestions')
             } else
             {
                 this.questionNumber = 0;
-                this.$store.commit('setUIMode', 'home')
-                this.$store.commit('setGameId', undefined);
+                gameStore.uimode = 'home'
+                gameStore.admin.newquiz.gameid = undefined
             }
         },
         async saveEditQuestion(gameid, questionNumber, quizMode, questionType, questiontext, answera, answerb, answerc, answerd, correctanswer, questiongroup, alternatives, answerfollowup) {            
@@ -142,5 +154,5 @@ export default {
             return await DataService.saveQuestion(parms);
         }
      }
-}
+})
 </script>

@@ -13,9 +13,9 @@
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-const Config = {
+export const AWSConfig = {
         appName: 'Simple Trivia Service',
-        region: 'us-east-1', //e.g. your region deployed in 'us-east-1',
+        region: '', //e.g. your region deployed in 'us-east-1',
     
     //Modify these values with outputs from the backend deployment step
         httpapi: '',// e.g. 'https://httpapid.execute-api.us-east-1.amazonaws.com'
@@ -27,5 +27,3 @@ const Config = {
         vapidPublicKey: '', //e.g. 'BKJLNm-RilHpXFTOitRqohNfeF3A_wrzd7ybhybWoWDgwcxaDIlcs1AsVxO7PbX3X7UlDYMZwKzAdu5ifRKAYpk'
     
     };
-    
-export default Config;

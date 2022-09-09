@@ -16,20 +16,20 @@
 <template>
   <div>
     <v-container>
+      <v-row class="mb-12"></v-row>
       <v-row>
           <v-toolbar color="primary" class="headline black--text">
-              <v-spacer></v-spacer>
+            <v-spacer></v-spacer>
               <v-toolbar-title>{{headerText}}</v-toolbar-title>
-              <v-spacer></v-spacer>
           </v-toolbar>
       </v-row>
-      <v-row>
-          <v-alert v-model="error" type="error" style="error">{{errortext}}</v-alert>
+      <v-row v-if="gameStore.cognito.errortext!==''">
+          <v-alert v-model="gameStore.cognito.error" type="error" style="error">{{ gameStore.cognito.errortext }}</v-alert>
       </v-row>
-      <v-row>
-          <v-alert v-model="status" type="info" style="info">{{statustext}}</v-alert>
+      <v-row v-if="gameStore.cognito.statustext!==''">
+          <v-alert v-model="gameStore.cognito.status" type="info" style="info">{{ gameStore.cognito.statustext }}</v-alert>
       </v-row>
-      <v-container v-if="mode=='login'">
+      <v-container v-if="mode==='login'">
         <v-row>
             <v-col><v-text-field label="Login" v-model='userName' placeholder='Login'/></v-col>
         </v-row>
@@ -40,17 +40,17 @@
                   @click:append="show = !show"
                   /></v-col>
         </v-row>
-        <v-row class="mb-1"> 
-            <v-btn x-large block color="accent" class="wite--text" v-on:click='login'>Login</v-btn>
+        <v-row class="mb-6"> 
+            <v-btn x-large block color="#00FFFF" v-on:click='login'>Login</v-btn>
         </v-row>
-        <v-row class="mb-1"> 
-            <v-btn x-large block color="accent" class="wite--text" v-on:click='setmode("register")'>Register</v-btn>
+        <v-row class="mb-6"> 
+            <v-btn x-large block color="#99FFFF" v-on:click='setmode("register")'>Register</v-btn>
         </v-row>
-        <v-row class="mb-1"> 
-            <v-btn x-large block color="accent" class="wite--text" v-on:click='setmode("forgotpassword")'>Reset Password</v-btn>
+        <v-row class="mb-6"> 
+            <v-btn x-large block color="#99FFFF" v-on:click='setmode("forgotpassword")'>Reset Password</v-btn>
         </v-row>
       </v-container>
-      <v-container v-if="mode=='register'">
+      <div v-if="mode=='register'">
         <v-row>
             <v-col><v-text-field label="Login" v-model='userName' placeholder='Login'/></v-col>
         </v-row>
@@ -71,28 +71,30 @@
                   @click:append="show2 = !show2"
                   /></v-col>
         </v-row>
-        <v-row class="mb-1"> 
-            <v-btn x-large block color="accent" class="wite--text" v-on:click='register'>Register</v-btn>
-        </v-row>
-        <v-row class="mb-1"> 
-            <v-btn x-large block color="accent" class="wite--text" v-on:click='setmode("login")'>Login</v-btn>
-        </v-row>
-        <v-row class="mb-1"> 
-            <v-btn x-large block color="accent" class="wite--text" v-on:click='setmode("forgotpassword")'>Reset Password</v-btn>
-        </v-row>
-      </v-container>
+        <div>
+          <v-row class="mb-6"> 
+              <v-btn x-large block color="#00FFFF" v-on:click='register()'>Register</v-btn>
+          </v-row>
+          <v-row class="mb-6"> 
+              <v-btn x-large block color="#99FFFF" v-on:click='setmode("login")'>Login</v-btn>
+          </v-row>
+          <v-row class="mb-6"> 
+              <v-btn x-large block color="#99FFFF" v-on:click='setmode("forgotpassword")'>Reset Password</v-btn>
+          </v-row>
+        </div>
+      </div>
       <v-container v-if="mode=='forgotpassword'">
         <v-row>
             <v-col><v-text-field label="Login" v-model='userName' placeholder='Login'/></v-col>
         </v-row>
-        <v-row class="mb-1"> 
-            <v-btn x-large block color="accent" class="wite--text" v-on:click='forgotpassword'>Reset Password</v-btn>
+        <v-row class="mb-6"> 
+            <v-btn x-large block color="#00FFFF" class="wite--text" v-on:click='forgotpassword'>Reset Password</v-btn>
         </v-row>
-        <v-row class="mb-1"> 
-            <v-btn x-large block color="accent" class="wite--text" v-on:click='setmode("login")'>Login</v-btn>
+        <v-row class="mb-6"> 
+            <v-btn x-large block color="#99FFFF" class="wite--text" v-on:click='setmode("login")'>Login</v-btn>
         </v-row>
-        <v-row class="mb-1"> 
-            <v-btn x-large block color="accent" class="wite--text" v-on:click='setmode("register")'>Register</v-btn>
+        <v-row class="mb-6"> 
+            <v-btn x-large block color="#99FFFF" class="wite--text" v-on:click='setmode("register")'>Register</v-btn>
         </v-row>      
       </v-container>
     </v-container>    
@@ -100,49 +102,20 @@
 </template>
 
 <script>
-import Config from '@/services/AWSConfig';
+import { defineComponent } from 'vue'
+import { AWSConfig } from '@/services/AWSConfig.js'
+import { useGameStore } from '@/stores/game.js'
 
-export default {
+export default defineComponent({
 
   name: 'CognitoUI',
 
-  methods: {
-    login() {
-      this.$emit('loginuser', this.userName, this.password);
-    },
-
-    setmode(mode) {
-      this.mode=mode
-    },
-
-    register() {
-      this.$emit('signupuser', this.userName, this.password1, this.password2, this.email);
-    },
-
-    forgotpassword() {
-      this.$emit('forgotpassword', this.userName);
-    },
-
+  setup() {
+    const gameStore = useGameStore()
+    return { gameStore, AWSConfig }
   },
-
-  computed:
-  {
-    username: function() { return this.$store.state.user.username},
-    status: function() { if(this.statustext===''){return false;} return true;},
-    error: function() { if(this.errortext===''){return false;} return true;},
-    headerText: function() { switch(this.mode) {
-        case 'login':
-          return `Login to ${Config.appName}`;
-        case 'register':
-          return `Register for ${Config.appName}`;
-        case 'forgotpassword':
-          return 'Reset Password';
-        default:
-          return '';
-    }},
-  },
-
-  data: function() { return {
+  
+  data() { return {
     userName: '',
     password: '',
     show: false,
@@ -153,10 +126,48 @@ export default {
     password1: '',
     password2: ''
   }},
+  emits: ['signupuser', 'loginuser', 'forgotpassword'],
 
-  props: {
-    errortext: String,
-    statustext: String
+  methods: {
+    login() {
+      const parms = { 'userName': this.userName, 'password': this.password}
+      this.$emit('loginuser', parms);
+    },
+
+    setmode(mode) {
+      const gameStore = useGameStore()
+      gameStore.cognito.statustext = ''
+      gameStore.cognito.status = false
+      gameStore.cognito.errortext = ''
+      gameStore.cognito.error = false
+      this.mode=mode
+    },
+
+    register() {
+      const parms = { 'userName' : this.userName, 'password1': this.password1,
+        'password2': this.password2, 'email': this.email}
+      this.$emit('signupuser', parms)
+    },
+
+    forgotpassword() {
+      this.$emit('forgotpassword', this.userName);
+    },
+
+  },
+
+  computed:
+  {
+    username: function() { return gameStore.state.user.username},
+    headerText: function() { switch(this.mode) {
+        case 'login':
+          return `Login`;
+        case 'register':
+          return `Register`;
+        case 'forgotpassword':
+          return 'Reset Password';
+        default:
+          return '';
+    }},
   }
-}
+})
 </script>

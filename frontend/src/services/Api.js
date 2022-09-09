@@ -13,12 +13,12 @@
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-import axios from 'axios';
-import Config from '@/services/AWSConfig.js';
+import axios from 'axios'
+import { AWSConfig } from '@/services/AWSConfig.js'
 
 export default(jwt) => {
     return axios.create({
-        baseURL: Config.httpapi,
+        baseURL: AWSConfig.httpapi,
         headers: {'Access-Control-Allow-Origin':'*',
                     'Content-Type':'application/json',
                     'Authorization':jwt}
