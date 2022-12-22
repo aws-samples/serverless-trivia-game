@@ -6,7 +6,7 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
-    "jsonwebtoken": "8.5.1",
+    "jsonwebtoken": "9.0.0",
     "jwk-to-pem": "2.0.4",
     "request": "2.88.2"
   }
