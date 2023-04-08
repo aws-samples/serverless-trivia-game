@@ -117,7 +117,7 @@
                     </v-table>
                 </v-col>
             </v-row>
-            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="processstep">{{step}}</v-btn>
+            <v-btn x-large block color=button-main class="white--text" v-on:click="processstep">{{step}}</v-btn>
             <v-row class="mb-6"></v-row>
         </span>
     </div>
@@ -125,10 +125,10 @@
 
 <script>
 import { defineComponent } from 'vue'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
-    name: 'LiveGameAdminController',
+    name: 'live-game-admin-controller',
     computed: {
         questionlist: function() { 
             const gameStore = useGameStore()
@@ -152,7 +152,7 @@ export default defineComponent({
             const gameStore = useGameStore()
             return gameStore.live.admin.players },
         questions: function() {
-            const gameStore = useGameStore()
+            //const gameStore = useGameStore()
             return this.questionlist.length },
         playeranswered: function() {
             const gameStore = useGameStore()
@@ -397,6 +397,7 @@ export default defineComponent({
                         default:
                             console.log('lost in steps');
                     }
+                    console.log(`processing a step with message ${JSON.stringify(msg)}`)
                     this.$emit('send-message', JSON.stringify(msg));
                     break;
             }
@@ -478,6 +479,8 @@ export default defineComponent({
             this.alts = this.alternatives;
             this.followup = this.answerfollowup;
             this.holdindex = index;
+            data.gameId = this.gameid;
+            console.log(`leaving buildquestion with ${JSON.stringify(data)}`)
             return data;
         },
 
@@ -518,8 +521,7 @@ export default defineComponent({
             //convert score to a percentage
             let scoreboardData = [];
             for(i=0;i<this.players.length;i++) {
-                let msg = {};
-                gameStore.live.admin.players[i].score=((this.players[i].score / this.questions) * 100).toFixed(2)
+                gameStore.live.admin.players[i].score=Number((this.players[i].score / this.questions) * 100).toFixed(2)
                 gameStore.live.admin.players[i].answered=''
                 //now update locally for display to everyone
                 let scoreboardmsg = {};
@@ -531,7 +533,7 @@ export default defineComponent({
                 scoreboardmsg.data.item.gameId = this.gameid;
                 scoreboardmsg.data.item.playerName = this.players[i].playerName;
                 scoreboardmsg.data.item.quizName = this.quizname;
-                scoreboardmsg.data.item.score = gameStore.live.admin.players[i].score;
+                scoreboardmsg.data.item.score = Number(gameStore.live.admin.players[i].score);
                 this.$emit('send-message', JSON.stringify(scoreboardmsg));
             }
             this.stepmode='end';
@@ -546,7 +548,7 @@ export default defineComponent({
             this.players.forEach(player => {
                 let playerData = {};
                 playerData.playerName = player.playerName;
-                playerData.score = player.score;
+                playerData.score = Number(player.score);
                 scoreboardData.push(playerData);
             })
             data.scoreboard = scoreboardData;
@@ -610,7 +612,7 @@ export default defineComponent({
                     quizMode: this.gametype, dateOfGame: this.dateString(), questions: questions};
                 let analyticsmessage = {message: 'liveadmin', data: {playerName: this.username, subaction:'analytics', analytics : analytics}};
                 this.$emit('send-message', JSON.stringify(analyticsmessage));
-                gameStore.live.admin.players[msg.playerIndex].score=msg.score;
+                gameStore.live.admin.players[msg.playerIndex].score=Number(msg.score);
                 gameStore.live.admin.players[msg.playerIndex].answered=msg.flag;
             }
         },

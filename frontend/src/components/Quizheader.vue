@@ -46,9 +46,9 @@
             <v-select label="Quiz Category" :items="quizCategories" v-model='quizCategory'/>
         </v-row>
         <v-row>
-            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click='checkinput'>Enter Questions</v-btn>
+            <v-btn x-large block color=button-main class="white--text" v-on:click='checkinput'>Enter Questions</v-btn>
         </v-row>
-    </v-container>
+</v-container>
 </template>
 
 <script>

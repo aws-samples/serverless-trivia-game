@@ -19,7 +19,7 @@ import { AWSConfig } from '@/services/AWSConfig.js'
 export default(jwt) => {
     return axios.create({
         baseURL: AWSConfig.httpapi,
-        headers: {'Access-Control-Allow-Origin':'*',
+        headers: {
                     'Content-Type':'application/json',
                     'Authorization':jwt}
     })

@@ -17,7 +17,7 @@
   <div>
     <v-container>
         <v-row class="mb-1"> 
-            <v-btn x-large block color="warning" class="wite--text" v-on:click='signout'>Sign Out</v-btn>
+            <v-btn x-large block color=signout class="wite--text" v-on:click='signout'>Sign Out</v-btn>
         </v-row> 
     </v-container>    
   </div>
@@ -25,7 +25,7 @@
 
 <script>
 export default {
-
+  name: 'signout-component',
   methods: {
     signout() {
       this.$emit('signout');

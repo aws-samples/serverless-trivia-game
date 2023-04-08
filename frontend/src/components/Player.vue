@@ -15,13 +15,11 @@
 
 <template>
     <v-container>
-        <v-row>
             <v-toolbar color="primary" class="headline black--text">
                 <v-spacer></v-spacer>
                 <v-toolbar-title>Player Information</v-toolbar-title>
                 <v-spacer></v-spacer>
             </v-toolbar>
-        </v-row>
         <v-row>
             <v-alert v-model="error" dismissible type="error" style="error">{{errortext}}</v-alert>
         </v-row>
@@ -40,54 +38,64 @@
                         </v-col>
                     </v-row>
                     <v-row justify="center">
-                    <v-dialog v-model="dialog" persistent max-width="400px">
-                        <template v-slot:activator="{ on, attrs }" justify="center">
-                            <v-btn color="accent" class="white--text" v-bind="attrs" v-on="on">Change Avatar</v-btn>
-                        </template>
-                        <v-card>
-                            <v-card-title>
-                            <span class="headline">User Avatar</span>
-                            </v-card-title>
+                        <v-dialog v-model="dialog" width="500px" variant="solo">
+                            <template v-slot:activator="{ props }">
+                            <v-btn color=button-main v-bind="props"> User Avatar </v-btn>
+                            </template>
+                            <v-card>
                             <v-card-text>
-                            <v-container>
+                                <v-container>
                                 <v-row justify="center">
-                                    <v-avatar v-model="avatar" color="accent" size="164" class="profile">
-                                        <img v-if="newavatar" :src="newavatar"/>
-                                        <img v-else-if="avatar" :src="avatar"/>
-                                        <v-icon v-else x-large dark>mdi-account-circle</v-icon>
+                                    <v-avatar
+                                    v-model="avatar"
+                                    color="accent"
+                                    size="164"
+                                    class="profile"
+                                    >
+                                    <img v-if="newavatar" :src="newavatar" />
+                                    <img v-else-if="avatar" :src="avatar" />
+                                    <v-icon v-else x-large dark>mdi-account-circle</v-icon>
                                     </v-avatar>
                                 </v-row>
                                 <v-row>
                                     <v-col>
-                                        <v-file-input
-                                            accept="image/png, image/jpeg, image/bmp" placeholder="Pick an avatar" prepend-icon="mdi-camera" label="Avatar"
-                                            @change="previewAvatar" v-model="file">
-                                        </v-file-input>
+
+                                    <v-file-input
+                                        id="filepicker"
+                                        accept="image/png, image/jpeg, image/bmp"
+                                        placeholder="Pick an avatar"
+                                        prepend-icon="mdi-camera"
+                                        label="Avatar"
+                                        show-size
+                                        v-model="files"
+                                        @change="previewAvatar"
+                                    >
+                                    </v-file-input>
                                     </v-col>
                                 </v-row>
-                            </v-container>
+                                </v-container>
                             </v-card-text>
                             <v-card-actions>
-                            <v-spacer></v-spacer>
-                            <v-btn
-                                color="#00FFFF"
-                                text
-                                @click="dialog = false"
-                            >
-                                Close
-                            </v-btn>
-                            <v-btn
-                                color="#00FFFF"
-                                text
+                                <v-btn
+                                color=text-button-main
+                                @keydown.esc="cancel"
                                 :loading="uploading"
                                 :disabled="uploading"
+                                @click="cancel"
+                                >
+                                Close
+                                </v-btn>
+                                <v-btn
+                                :loading="uploading"
+                                :disabled="uploading"
+                                color=text-button-main
                                 @click="uploadAvatar"
-                            >
+                                >
                                 Save
-                            </v-btn>
+                                </v-btn>
                             </v-card-actions>
-                        </v-card>
-                    </v-dialog>
+                            </v-card>
+                        </v-dialog>
                     </v-row>
                 </v-container>
             </v-col>
@@ -118,13 +126,13 @@
              </v-col>
         </v-row>
         <v-row class="mb-6">
-            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click='requestBucks'>Request Bucks</v-btn>
+            <v-btn x-large block color=button-main class="white--text" v-on:click='requestBucks'>Request Bucks</v-btn>
         </v-row>
         <v-row class="mb-6">
-            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click='checkinput'>Update Player</v-btn>
+            <v-btn x-large block color=button-main class="white--text" v-on:click='checkinput'>Update Player</v-btn>
         </v-row>
         <v-row class="mb-6"> 
-            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click='returnHome'>Return to Home Page</v-btn>
+            <v-btn x-large block color=button-main class="white--text" v-on:click='returnHome'>Return to Home Page</v-btn>
         </v-row>
     </v-container>    
 </template>
@@ -132,12 +140,16 @@
 <script>
 import { defineComponent } from 'vue'
 import { DataService } from '@/services/DataServices.js'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
 
-    name: 'Player',
+    name: 'player-details',
     computed: {
+        profile: function() {
+            const gameStore = useGameStore()
+            return gameStore.profile;
+        },
         username: function() { 
             const gameStore = useGameStore()
             return gameStore.user.username},
@@ -145,26 +157,26 @@ export default defineComponent({
             const gameStore = useGameStore()
             return gameStore.user.cognito.idToken.jwtToken },
         location: {
-            get: function() { 
+            get () { 
                 const gameStore = useGameStore()
                 return gameStore.profile.location },
-            set: function(newval) {
+            set (newval) {
                 const gameStore = useGameStore()
                 gameStore.profile.location = newval}
         },
         realname: {
-            get: function() { 
+            get () { 
                 const gameStore = useGameStore()
                 return gameStore.profile.realName },
-            set: function(newval) {
+            set (newval) {
                 const gameStore = useGameStore()
                 gameStore.profile.realName = newval}
         },
         avatar: {
-            get: function() { 
+            get () { 
                 const gameStore = useGameStore()
                 return gameStore.profile.avatar },
-            set: function(newval) {
+            set (newval) {
                 const gameStore = useGameStore()
                 gameStore.profile.avatar = newval
                 gameStore.user.picture = newval
@@ -193,7 +205,7 @@ export default defineComponent({
         uploadUrl: '',
         newavatar: null,
         uploading: false,
-        file: null
+        files: null
     }},
     methods: {
         returnHome() {
@@ -213,15 +225,16 @@ export default defineComponent({
             let parms = {jwt: this.myjwt, playerName: this.username, playerLocation: this.location, realName: this.realname, newavatar: ''} ;
             let result = await DataService.postPlayerWallet(parms)
             if(result.status===200){
-                this.statustext = 'Bucks Requested'
+                this.statustext = 'Bucks Requested' 
                 this.status= true
             }
         },
-        async previewAvatar(e) {
-            if(e) {
+        async previewAvatar() {
+            if(this.files.length>0) {
                 this.uploading = true
-                this.newavatar = URL.createObjectURL(e)
-                let parms = {jwt: this.myjwt, playerName: this.username, newavatar: e.name, fileType: e.type} 
+                this.newavatar = URL.createObjectURL(this.files[0])
+                console.log(`newavatar: ${this.newavatar}`)
+                let parms = {jwt: this.myjwt, playerName: this.username, newavatar: this.files[0].name, fileType: this.files[0].type} 
                 let result = await DataService.setPlayer(parms)
                 if(result.status==200) {
                     this.uploadUrl = result.data.signedurl
@@ -229,9 +242,13 @@ export default defineComponent({
                 this.uploading = false
             } else {
                 this.newavatar = null
+                this.uploading = false
             }
         },
         async uploadAvatar() {
+            console.log(`uploadAvatar`)
+            console.log(`${Object.getOwnPropertyNames(this.files[0])}`)
+            console.log(`files: ${JSON.stringify(this.files[0])}`)
             if(this.uploadUrl=='') {
                 this.errortext = "An error occurred while uploading the avatar"
                 this.error = true
@@ -240,9 +257,9 @@ export default defineComponent({
                 const upload = await fetch(this.uploadUrl, {
                     method: 'PUT',
                     headers: {
-                        "Content-Type": this.file.type
+                        "Content-Type": this.files[0].type
                     },
-                    body: this.file
+                    body: this.files[0]
                 }).catch(err => {
                     console.log(err.response.data)
                     this.errortext = "An error occurred while uploading the avatar"
@@ -256,6 +273,9 @@ export default defineComponent({
                 this.uploading = false
             }
             this.dialog = false
+        },
+        async cancel() {
+            this.dialog = false;
         }
     }
 })

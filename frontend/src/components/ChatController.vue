@@ -25,16 +25,16 @@
         <component v-bind:is="currentTabComponent" v-bind:data=currentChat
         class="tab"></component>
         <v-text-field label="Chat" v-model="chat" placeholder="Chat" class="white--text"></v-text-field>
-        <v-btn color="#00FFFF" class="white--text" v-on:click='handlechat'>send chat</v-btn>
+        <v-btn color=button-main class="white--text" v-on:click='handlechat'>send chat</v-btn>
     </div></v-col></v-row></v-col>
 </template>
 <script>
 import { defineComponent } from 'vue'
 import GlobalChat from './Globalchat.vue'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
-    name: 'ChatController',
+    name: 'chat-controller',
 
     components: {
         GlobalChat,

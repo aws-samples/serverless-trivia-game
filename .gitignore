@@ -1,5 +1,4 @@
 backend/.aws-sam
-backend/dependencies/
 
 .DS_Store
 node_modules

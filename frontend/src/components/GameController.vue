@@ -30,7 +30,7 @@ import Question from './Question.vue'
 import Scoreboard from './Scoreboard.vue'
 import LiveGamePlayerController from './LiveGamePlayerController.vue'
 import BlitzGamePlayer from './BlitzGamePlayer.vue'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
     name: 'GameController',
@@ -66,8 +66,8 @@ export default defineComponent({
             gameStore.scoreboard.players = []
             gameStore.game.quizName = ''
             gameStore.admin.newquiz.gameid = ''
+            gameStore.games.gamelist = []
             gameStore.gamemode = 'showgames'
-            this.$store.commit('setGameState', 'showgames');
         },
 
         listGames() {

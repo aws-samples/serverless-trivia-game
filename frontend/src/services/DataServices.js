@@ -102,6 +102,17 @@ export const DataService = {
         }
         return response;
     },
+    getScoreboardWithPlayer(parms){
+        let jwt = parms.jwt;
+        delete parms.jwt;
+        let response;
+        try {
+            response = Api(jwt).get('/games/' +parms.gameId + '/scoreboard/' + parms.playerName);
+        } catch(e) {
+            console.error(JSON.stringify(e));
+        }
+        return response;
+    },
     saveScore(parms){
         let jwt = parms.jwt;
         delete parms.jwt;

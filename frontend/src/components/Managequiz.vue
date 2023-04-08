@@ -17,7 +17,7 @@
     <div>
         <QuizList v-if="adminmode=='showadminlist'"/>
         <QuizEdit v-if="adminmode=='showadminedit'"
-            v-on:save-question="saveEditQuestion"
+            v-on:save-updates="saveUpdates"
         >
         </QuizEdit>
         <QuizHeader v-if="adminmode=='showheader'"
@@ -31,7 +31,7 @@
             v-on:save-question="getNextQuestion">
         </QuizDetail>
 
-    7</div>
+    </div>
 </template>
 
 <script>
@@ -41,10 +41,10 @@ import QuizHeader from './Quizheader.vue'
 import QuizDetail from './Quizdetail.vue'
 import QuizEdit from './QuizEdit.vue'
 import { DataService } from '@/services/DataServices.js'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
-    name: 'Managequiz',
+    name: 'manage-quiz',
     components: {
         QuizHeader,
         QuizDetail,
@@ -87,12 +87,18 @@ export default defineComponent({
             this.quizMode = mode
             this.quizCategory = category
             this.questionNumber = 1
-            //save the header as the first question to get the gameid
+            //save the header to get the gameid
             let header = {pk: this.username, quizName: name, quizDescription: description, questionType: type,
                 quizMode: mode, playerName: this.username, usage: 'unlimited', category: this.quizCategory }
-            header.quizName = name
             let response = await this.saveHeader(header)
-            gameStore.admin.newquiz.gameid = response.data.gameid
+            const gameData = {pk: this.username, sk: response.data.gameId, gameId: response.data.gameId,
+                quizName: name, quizDescription: description, questionType: type,
+                quizMode: mode, playerName: this.username, usage: 'unlimited', category: this.quizCategory,
+                questions: [] }
+            console.log(JSON.stringify(gameData))
+            gameStore.admin.quiz.gameInfo = gameData;
+            console.log(`done saving header first time`)
+            console.log(JSON.stringify(gameStore.admin.quiz.gameInfo))
             if(this.questionNumber<=this.quizNumberOfQuestions) {
                 this.setMode('showquestions');
             } else
@@ -100,33 +106,44 @@ export default defineComponent({
                 alert('You entered an invalid number of questions!')
             }
         },
-        async getNextQuestion(questiontext, answera, answerb, answerc, answerd, correctanswer, questiongroup, alternatives, answerfollowup) {
+        async getNextQuestion(sentQuestion) {
+            console.log(` got a question: ${JSON.stringify(sentQuestion)}`)
             const gameStore = useGameStore()
-            let question = {questionNumber: this.questionNumber, question: questiontext, 
-                correctAnswer: correctanswer, answerFollowup: answerfollowup, gameId: this.gameid }
-                question.questionNumber = this.questionNumber
+            let question = {questionNumber: this.questionNumber, question: sentQuestion.question, 
+                correctAnswer: sentQuestion.correctAnswer, answerFollowup: sentQuestion.answerFollowup }
             if(this.questionType==='Multiple Choice') {
-                question.answerA = answera
-                question.answerB = answerb
-                question.answerC = answerc
-                question.answerD = answerd
+                question.answerA = sentQuestion.answerA
+                question.answerB = sentQuestion.answerB
+                question.answerC = sentQuestion.answerC
+                question.answerD = sentQuestion.answerD
             }
             if(this.questionType==='Open Answer') {
-                question.alternatives = alternatives
+                question.alternatives = sentQuestion.alternatives
             }
             if(this.quizMode==='Multiplayer - Competitive') {
-                question.questionGroup = questiongroup
+                question.questionGroup = sentQuestion.questionGroup
             }
-            await this.saveQuestion(question)
+            //await this.saveQuestion(question)
+            gameStore.admin.quiz.gameInfo.questions.push(question)
+            console.log(`current gameInfo`)
+            console.log(JSON.stringify(gameStore.admin.quiz.gameInfo))
+            //gameStore.admin.quiz.gameInfo = gameDetail
             this.questionNumber ++
             if(this.questionNumber<=this.quizNumberOfQuestions) {
                 this.setMode('showquestions')
-            } else
-            {
+            } else {
+                console.log(`current gameInfo`)
+                console.log(JSON.stringify(gameStore.admin.quiz.gameInfo))
+                //write the updated gameInfo record
+                await this.saveHeader(gameStore.admin.quiz.gameInfo)
                 this.questionNumber = 0;
-                gameStore.uimode = 'home'
-                gameStore.admin.newquiz.gameid = undefined
+                this.setMode('showadminlist')
             }
+        },
+        async saveUpdates() {
+            const gameStore = useGameStore()
+            console.log(`saving ${JSON.stringify(gameStore.admin.game)}`)
+            await this.saveHeader(gameStore.admin.game)
         },
         async saveEditQuestion(gameid, questionNumber, quizMode, questionType, questiontext, answera, answerb, answerc, answerd, correctanswer, questiongroup, alternatives, answerfollowup) {            
             let question = {questionNumber: questionNumber, question: questiontext, 
@@ -146,12 +163,17 @@ export default defineComponent({
             await this.saveQuestion(question);
         },
         async saveHeader(parms){
+            console.log(`saving parms`)
+            console.log(JSON.stringify(parms))
             parms.jwt = this.myjwt;
             return await DataService.saveHeader(parms);
         },
         async saveQuestion(parms){
+            const gameStore = useGameStore()
+            gameStore.admin.quiz.gameInfo.questions.push(parms)
+            /*let parms = gameStore.admin.quiz.gameInfo
             parms.jwt = this.myjwt;
-            return await DataService.saveQuestion(parms);
+            return await DataService.saveHeader(parms);*/
         }
      }
 })
