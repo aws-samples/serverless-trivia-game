@@ -28,22 +28,22 @@
                         <v-row>
                             <v-col v-if="multiplechoice" align="center" justify="center">
                                 <v-row class="mb-1"><v-col cols="12">
-                                <v-card v-if="questions[questionNumber].answerA != ''" outlined @click='answer(questionNumber, "A")' color="light-blue">
+                                <v-card v-if="questions[questionNumber].answerA != ''" outlined @click='answer(questionNumber, "A")' color=answera>
                                     <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerA }}</v-card-title>
                                 </v-card>
                                 </v-col></v-row>
                                 <v-row class="mb-1"><v-col cols="12">
-                                <v-card v-if="questions[questionNumber].answerB != ''" outlined @click='answer(questionNumber, "B")' color="yellow">
+                                <v-card v-if="questions[questionNumber].answerB != ''" outlined @click='answer(questionNumber, "B")' color=answerb>
                                     <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerB }}</v-card-title>                
                                 </v-card>
                                 </v-col></v-row>
                                 <v-row class="mb-1"><v-col cols="12">
-                                <v-card v-if="questions[questionNumber].answerC != ''" outliined @click='answer(questionNumber, "C")' color="red">
+                                <v-card v-if="questions[questionNumber].answerC != ''" outliined @click='answer(questionNumber, "C")' color=answerc>
                                     <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerC }}</v-card-title>
                                 </v-card>
                                 </v-col></v-row>
                                 <v-row class="mb-1"><v-col cols="12">
-                                <v-card v-if="questions[questionNumber].answerD != ''" outlined @click='answer(questionNumber, "D")' color="green">
+                                <v-card v-if="questions[questionNumber].answerD != ''" outlined @click='answer(questionNumber, "D")' color=answerd>
                                     <v-card-title class="black--text justify-center">{{ questions[questionNumber].answerD }}</v-card-title>
                                 </v-card>
                                 </v-col></v-row>
@@ -54,20 +54,24 @@
                         <v-row>
                         <v-text-field label="Response" v-model='responsetext' placeholder='Response'/>
                         </v-row><v-row class="mb-10">
-                        <v-btn x-large block class="white--text" color="#00FFFF" v-on:click='answeropen(questionNumber)'>Answer</v-btn>
+                        <v-btn x-large block class="white--text" color=button-main v-on:click='answeropen(questionNumber)'>Answer</v-btn>
                         </v-row>
                     </div>
                 </v-card-text>
             </v-card>
         </div>
         <div v-else>
-            <v-row class="headline" align="center" justify="center">
+            <v-toolbar color="primary" class="headline black--text">
+                <v-toolbar-title>Answerboard for: {{quizname}}</v-toolbar-title>
+            </v-toolbar>
+
+<!--            <v-row class="headline" align="center" justify="center">
                 <v-toolbar color="primary" class="headline black--text">
                     <v-toolbar-title>Answerboard</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-toolbar-title>Quiz: {{quizname}}</v-toolbar-title> 
                 </v-toolbar>
-            </v-row>
+            </v-row> -->
             <v-row class="mb-6" align="center" justify="center">
            
 <!--                 <v-data-table
@@ -128,7 +132,7 @@
                     </v-table>
             </v-row>
             <v-row v-if='showscoreboardbutton' class="mb-6">
-                <v-btn x-large block class="white--text" color="#00FFFF" v-on:click='getscoreboard'>Show Scoreboard</v-btn>
+                <v-btn x-large block class="white--text" color=button-main v-on:click='getscoreboard'>Show Scoreboard</v-btn>
             </v-row>
         </div>
     </v-container>
@@ -138,10 +142,10 @@
 <script>
 import { defineComponent } from 'vue'
 import { DataService } from '@/services/DataServices.js'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
-    name: 'Question',
+    name: 'question-presenter',
     props: {
         start: Boolean
     },
@@ -221,15 +225,16 @@ export default defineComponent({
 
         async getscoreboarddata(parms) {
             parms.jwt = this.myjwt;
-            let results = await DataService.getScoreboard(parms);
+            let results = await DataService.getScoreboardWithPlayer(parms);
             return results;
         },
 
         async scorequiz() {
-            let scoreQuiz = {responses: this.responses, gameId: this.gameid, 
+            const gameStore = useGameStore()
+            let scoreQuiz = {responses: this.responses, gameId: this.gameid, owner: gameStore.game.owner,
                 quizName: this.quizname, quizMode: this.quizmode, playerName: this.username};
             let response = await this.getscore(scoreQuiz); 
-            let score = response.data.score*100;
+            let score = response.data.score;
             alert('You scored ' + score + '%');
             this.answerboard = response.data.answerboard;
             let scoredata = {jwt: this.myjwt, gameId: this.gameid, playerName:this.username, score:response.data.score};
@@ -239,7 +244,7 @@ export default defineComponent({
 
         async getscoreboard() {
             const gameStore = useGameStore()
-            let parms = {gameId: this.gameid};
+            let parms = {gameId: this.gameid, playerName: this.username}
             let response = await this.getscoreboarddata(parms)
             gameStore.system.unshift('Showing Scoreboard' + "\r\n")
             gameStore.scoreboard.players = response.data

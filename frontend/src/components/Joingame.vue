@@ -16,9 +16,7 @@
 <template>
     <v-container>
         <v-toolbar color="primary" class="headline black--text">
-            <v-spacer></v-spacer>
             <v-toolbar-title>Select A Game To Play</v-toolbar-title>
-            <v-spacer></v-spacer>
         </v-toolbar>
         <v-row class="mb-3">
             <v-alert v-model="error" dismissible type="error" style="error">{{errortext}}</v-alert>
@@ -37,7 +35,7 @@
                             </span>
                         </v-col>
                         <v-col width=33%>
-                            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click='checkinput'>Search for Games</v-btn>
+                            <v-btn x-large block color=button-sub class="white--text" v-on:click='checkinput'>Search for Games</v-btn>
                         </v-col>
                 </v-card-title>
 <!--                 <v-data-table
@@ -102,18 +100,18 @@
             </v-card>
         <v-row class="mb-6"></v-row><v-row class="mb-6"></v-row><v-row class="mb-6"></v-row><v-row class="mb-6"></v-row>
         <v-row class="mb-6">
-            <v-btn x-large block color='#00FFFF' class="white--text" v-on:click='$emit("close-me")'>Home</v-btn>
+            <v-btn x-large block color=button-main class="white--text" v-on:click='$emit("close-me")'>Home</v-btn>
         </v-row>
     </v-container>
 </template>
 
 <script>
-import { getCurrentInstance, defineComponent } from 'vue'
+import { defineComponent } from 'vue'
 import { DataService } from '@/services/DataServices.js'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
-    name: 'Joingame',
+    name: 'join-game',
     data: function () {
         return {
             search: '',
@@ -207,6 +205,7 @@ export default defineComponent({
             if(game.quizMode==='Single Player') {
                 let msg = await DataService.getGame(quizinfo)
                 gameStore.system.unshift('Starting Quiz!' + "\r\n")
+                gameStore.game.owner = msg.data.pk
                 gameStore.game.questions = msg.data.questions
                 gameStore.game.numberofquestions = msg.data.questions.length
                 gameStore.game.quizName = msg.data.quizName

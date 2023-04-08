@@ -1,0 +1,565 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Backend using IoT
+
+Transform:
+- AWS::Serverless-2016-10-31
+
+Parameters:
+  LogRetentionDays:
+    Type: Number
+    Description: Number of days to retain CloudWatch Logs for
+    Default: 7
+  EMFNamespace:
+    Type: String
+    Default: "STS"
+
+Globals:
+  Function:
+    Layers:
+      - !Sub arn:aws:lambda:${AWS::Region}:094274105915:layer:AWSLambdaPowertoolsTypeScript:5
+      - !Sub arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14
+    Runtime: nodejs18.x
+    Handler: app.handler
+    MemorySize: 512 
+    Timeout: 10
+    Tracing: Active
+    Environment:
+      Variables:
+        AWS_EMF_NAMESPACE: !Sub "${EMFNamespace}"
+
+Resources:
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: 10.0.0.0/28
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Public Subnet (AZ1)
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: 10.0.0.82/28
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Public Subnet (AZ2)
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Subnet (AZ1)
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Subnet (AZ2)
+
+  NatGatewayAEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGatewayBEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGatewayA:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayAEIP.AllocationId
+      SubnetId: !Ref PublicSubnetA
+
+  NatGatewayB:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayBEIP.AllocationId
+      SubnetId: !Ref PublicSubnetB
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Public Routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetA
+
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetB
+
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Routes (AZ1)
+
+  DefaultPrivateRouteA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayA
+
+  PrivateSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      SubnetId: !Ref PrivateSubnetA
+
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName} Private Routes (AZ2)
+
+  DefaultPrivateRouteB:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayB
+
+  PrivateSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      SubnetId: !Ref PrivateSubnetB
+
+  RedisCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      CacheNodeType: cache.t3.medium
+      CacheSubnetGroupName: !Ref RedisClusterSubnetGroup
+      Engine: redis
+      NumCacheNodes: 1
+      VpcSecurityGroupIds:
+        - !GetAtt RedisClusterSecurityGroup.GroupId
+
+  RedisClusterSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnets for Redis
+      SubnetIds:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Lambda Security Group
+
+  RedisClusterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lock down Redis to VPC
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 6379
+        ToPort: 6379
+        SourceSecurityGroupId: !GetAtt LambdaSecurityGroup.GroupId
+
+  SendQuestionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: MMLive
+      CodeUri: functions/question_send/
+      Environment:
+        Variables:
+          REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
+          REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+          REGION: !Sub "${AWS::Region}"
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt LambdaSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+      Policies:
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - !Ref SendQuestionPolicy
+      Events:
+        IoTRule:
+          Type: IoTRule
+          Properties:
+            Sql: SELECT * FROM 'games/+/nextquestion'
+      Tags:
+        Dashboard: IoT
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  SendQuestionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref SendQuestionFunction]]
+
+  SendQuestionPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-IoTSendQuestionPolicy" ] ]      
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+            - Effect: "Allow"
+              Action: "iot:Publish"
+              Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/games/*/question"]]
+
+  CacheGameFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: MMLive
+      CodeUri: functions/game_cache/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
+          REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+          EVENT_BUS_NAME: !ImportValue STS-STSEventBusName
+          CHAT_TOPIC_ARN: !ImportValue STS-ChatTopicArn
+          PLAYER_INVENTORY_TABLE_NAME: !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub "${AWS::Region}"
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt LambdaSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - SNSPublishMessagePolicy:
+            TopicName: !ImportValue STS-ChatTopicName
+        - EventBridgePutEventsPolicy:
+            EventBusName: !ImportValue STS-STSEventBusName
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - !Ref CacheGamePolicy
+      Events:
+        IoTRule:
+          Type: IoTRule
+          Properties:
+            Sql: SELECT * FROM 'hostgame'
+      Tags:
+        Dashboard: IoT
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  CacheGameLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref CacheGameFunction]]
+  
+  CacheGamePolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-IoTCacheGamePolicy" ] ]      
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: "Allow"
+            Action: "iot:Publish"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/games/*/questionlist"]]
+
+  JoinGameFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: MMLive
+      CodeUri: functions/game_join/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
+          REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+          REGION: !Sub "${AWS::Region}"
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt LambdaSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+      Policies:
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - !Ref JoinGamePolicy
+      Events:
+        IoTRule:
+          Type: IoTRule
+          Properties:
+            Sql: SELECT * FROM 'games/+/join/+'
+      Tags:
+        Dashboard: IoT
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  JoinGameLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref JoinGameFunction]]
+
+  JoinGamePolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-IoTJoinGamePolicy" ] ]      
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: "Allow"
+            Action: "iot:Publish"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/games/*/joined/*"]]
+
+  ReceiveAnswerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: MMLive
+      CodeUri: functions/answer_receive/
+      MemorySize: 512
+      Environment:
+        Variables:
+          REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
+          REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+          RESPONSE_STREAM: !ImportValue STS-QuizSourceStreamName
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - KinesisCrudPolicy:
+            StreamName: !ImportValue STS-QuizSourceStreamName
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - !Ref ReceiveAnswerIoTPolicy
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt LambdaSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+      Events:
+        IoTRule:
+          Type: IoTRule
+          Properties:
+            Sql: SELECT * FROM 'games/+/answers/+'
+      Tags:
+        Dashboard: IoT
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+
+  ReceiveAnswerIoTPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-IoTReceiveAnswerPolicy" ] ]      
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: "Allow"
+            Action: "iot:Publish"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/games/*/scoreboard"]]
+          - Effect: "Allow"
+            Action: "iot:Publish"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/games/*/playercorrect"]]
+          - Effect: "Allow"
+            Action: "iot:Publish"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/games/*/results/*"]]
+
+  ReceiveAnswerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref ReceiveAnswerFunction]]
+
+  StartGameFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: MMLive
+      CodeUri: functions/game_start/
+      MemorySize: 512
+      Environment:
+        Variables:
+          REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
+          REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+        - !Ref StartGameIoTPolicy
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt LambdaSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+      Events:
+        IoTRule:
+          Type: IoTRule
+          Properties:
+            Sql: SELECT * FROM 'games/+/startgame'
+      Tags:
+        Dashboard: IoT
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  StartGameLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref StartGameFunction]]
+
+  StartGameIoTPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-IoTStartGamePolicy" ] ]      
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: "Allow"
+            Action: "iot:Publish"
+            Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/games/*/scoreboard"]]
+
+  EndGameFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: MMLive
+      CodeUri: functions/game_end/
+      MemorySize: 1536
+      Timeout: 20
+      Environment:
+        Variables:
+          LEADER_BOARD_TABLE_NAME: !ImportValue STS-HighScoreTable
+          PLAYER_PROGRESS_TOPIC: !ImportValue STS-PlayerProgressTopicArn
+          REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
+          REDIS_PORT: !GetAtt RedisCluster.RedisEndpoint.Port
+          EVENT_BUS_NAME: !ImportValue STS-STSEventBusName
+          REGION: !Sub "${AWS::Region}"
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt LambdaSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue STS-HighScoreTable
+        - SNSPublishMessagePolicy:
+            TopicName: !ImportValue STS-PlayerProgressTopicName
+        - EventBridgePutEventsPolicy:
+            EventBusName: !ImportValue STS-STSEventBusName
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        IoTRule:
+          Type: IoTRule
+          Properties:
+            Sql: SELECT * FROM 'games/+/endthegame'
+      Tags:
+        Dashboard: IoT
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  EndGameLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref EndGameFunction]]

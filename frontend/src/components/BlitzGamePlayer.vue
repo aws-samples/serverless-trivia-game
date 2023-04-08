@@ -37,25 +37,25 @@
             <span v-if="multiChoiceQuestionType">
                 <v-col align="center" justify="center">
                     <v-row class="mb-1"><v-col cols="12">
-                    <v-card v-if="question.answerA != ''" outlined @click='answer("A")' color="light-blue" >
+                    <v-card v-if="question.answerA != ''" outlined @click='answer("A")' color=answera >
                     <v-card-title class="justify-center black--text">{{ question.answerA }}
                     </v-card-title>
                     </v-card>
                     </v-col></v-row>
                     <v-row class="mb-1"><v-col cols="12">
-                    <v-card v-if="question.answerB != ''" outlined @click='answer("B")' color="yellow" >
+                    <v-card v-if="question.answerB != ''" outlined @click='answer("B")' color=answerb >
                         <v-card-title class="justify-center black--text">{{ question.answerB }}
                         </v-card-title>                
                     </v-card>
                     </v-col></v-row>
                     <v-row class="mb-1"><v-col cols="12">
-                    <v-card v-if="question.answerC != ''" outlined @click='answer("C")' color="red" >
+                    <v-card v-if="question.answerC != ''" outlined @click='answer("C")' color=answerc >
                         <v-card-title class="justify-center black--text">{{ question.answerC }}
                         </v-card-title>
                     </v-card>
                     </v-col></v-row>
                     <v-row class="mb-1"><v-col cols="12">
-                    <v-card v-if="question.answerD != ''" outlined @click='answer("D")' color="green" >
+                    <v-card v-if="question.answerD != ''" outlined @click='answer("D")' color=answerd >
                         <v-card-title class="justify-center black--text">{{ question.answerD }}
                         </v-card-title>
                     </v-card>
@@ -146,12 +146,12 @@
 
 <script>
 import { defineComponent } from 'vue'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
 
     
-    name: 'BlitzGamePlayer',
+    name: 'blitz-game-player',
     computed: {
         mode: function() {
             const gameStore = useGameStore()
@@ -169,13 +169,10 @@ export default defineComponent({
             const gameStore = useGameStore()
             return gameStore.live.blitz.myResult },
         correctanswer: function() {
-            const gameStore = useGameStore()
             return this.myresult.correctAnswer },
         answerFollowup: function() { 
-            const gameStore = useGameStore()
             return this.myresult.followUp },
         myresultvalue: function() { 
-            const gameStore = useGameStore()
             return this.myresult.text },
         playersresponded: function() {
             const gameStore = useGameStore()

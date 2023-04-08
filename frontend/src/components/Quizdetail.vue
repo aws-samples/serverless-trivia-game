@@ -65,7 +65,7 @@
                 </v-row>
             </span>
             <v-row>
-                <v-btn color="#00FFFF" x-large block class="white--text" v-on:click='savequestions'>Save Question</v-btn>
+                <v-btn color=button-main x-large block class="white--text" v-on:click='savequestions'>Next Question</v-btn>
             </v-row>
 
     </v-container>
@@ -157,7 +157,9 @@ export default {
                 this.errortext = 'Multiple Choice Question must have at least A and B answers';
             }
             if(this.errortext === '') {
-                this.$emit("save-question", this.question, this.answerA, this.answerB, this.answerC, this.answerD, this.correctAnswer, this.questionGroup, this.alternatives, this.answerFollowup);
+                this.$emit("save-question", {questionNumber: this.questionNumber, question: this.question, answerA: this.answerA, answerB: this.answerB, 
+                    answerC: this.answerC, answerD: this.answerD, correctAnswer: this.correctAnswer, questionGroup: this.questionGroup, 
+                    alternatives: this.alternatives, answerFollowup: this.answerFollowup});
                 this.clearForm();
             } else {
                 this.error = true;

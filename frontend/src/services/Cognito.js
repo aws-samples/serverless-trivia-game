@@ -13,21 +13,51 @@
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-//const AWS = require('aws-sdk');
-import * as AWS from 'aws-sdk'
 import { AWSConfig } from './AWSConfig'
 import { CognitoUser, CognitoUserAttribute, CognitoUserPool, AuthenticationDetails } from 'amazon-cognito-identity-js';
-import { Auth } from 'aws-amplify'
+import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
+import { auth } from 'aws-iot-device-sdk-v2';
 
-let userPool = new CognitoUserPool({
+export let userPool = new CognitoUserPool({
         UserPoolId: AWSConfig.userPoolId,
         ClientId: AWSConfig.appClientId
     });
 
 let cognitoUser;
+
     
-AWS.config.region = AWSConfig.region;
-      
+//AWS.config.region = AWSConfig.region;
+export class AWSCognitoCredentialsProvider extends auth.CredentialsProvider{
+
+    constructor(options, expire_interval_in_ms)
+    {
+        super();
+        this.options = options;
+
+        setInterval(async ()=>{
+            await this.refreshCredentials();
+        },expire_interval_in_ms?? 3600*1000);
+    }
+
+    getCredentials() {
+        return {
+            aws_access_id: this.cachedCredentials?.accessKeyId ?? "",
+            aws_secret_key: this.cachedCredentials?.secretAccessKey ?? "",
+            aws_sts_token: this.cachedCredentials?.sessionToken,
+            aws_region: this.options.Region
+        }
+    }
+
+    async refreshCredentials()  {
+        this.cachedCredentials = await fromCognitoIdentityPool({
+            // Required. The unique identifier for the identity pool from which an identity should be
+            // retrieved or generated.
+            identityPoolId: AWSConfig.identityPoolId,
+            clientConfig: { region: AWSConfig.region },
+        })();
+    }
+}
+
 function authenticateUser(uid, pwd) {
     var promise = new Promise(function(resolve, reject) {
         const authenticationDetails = new AuthenticationDetails({
@@ -46,31 +76,6 @@ function authenticateUser(uid, pwd) {
                 reject(error);
             }
         });
-    });
-    return promise;
-}
-
-function getCredentials(token) {
-    var promise = new Promise((resolve, reject) => {   
-        let providerKey = `cognito-idp.${AWS.config.region}.amazonaws.com/${AWSConfig.userPoolId}`;
-        let configCreds = {
-            IdentityPoolId: AWSConfig.identityPoolId,
-            Logins: {
-                [providerKey]: token
-            },
-        };
-        try {
-            AWS.config.credentials = new AWS.CognitoIdentityCredentials(configCreds);
-            AWS.config.credentials.get();
-            AWS.config.credentials.get(function(){
-                const { accessKeyId, secretAccessKey, sessionToken } = AWS.config.credentials;
-                const credentialSubset = { accessKeyId, secretAccessKey, sessionToken };
-            resolve(credentialSubset);
-        });
-        } catch (e) {
-            console.error(e);
-            reject(e);
-        }
     });
     return promise;
 }
@@ -109,17 +114,15 @@ function loginUser(username, password) {
         var promise = authenticateUser(username, password);
         promise
         .then(function(cognitoUserSession){
-            const token = cognitoUserSession.getIdToken().getJwtToken();
-            const promise1 = getCredentials(token, 'user_pool');
             const promise2 = buildUserObject(username);
             const promise3 = returnSession(cognitoUserSession);
-            return Promise.all([promise1, promise2, promise3]);
+            return Promise.all([promise2, promise3]); //promise1
         })
         .then(function(values){
-            const awsCredentials = values[0];
-            const userObj = values[1];
-            const cognitoSession = values[2];
-            const userData = {awsCredentials, userObj, cognitoSession}; 
+            //const awsCredentials = values[0];
+            const userObj = values[0];
+            const cognitoSession = values[1];
+            const userData = { userObj, cognitoSession}; //awsCredentials,
             resolve(userData);
         })
         .catch(function(err){
@@ -198,14 +201,16 @@ export const resetforgotpw = function(username, code, password) {
 }
 
 export const cognitosignout = async function (){
-    await cognitoUser.globalSignOut({
-        onSuccess() {
-            console.log('successfully logged out');
-            return true;
-        },
-        onFailure(err) {
-            console.error(JSON.stringify(err));
-            return false;
-        }
-    });
+    if(cognitoUser) {
+        await cognitoUser.globalSignOut({
+            onSuccess() {
+                console.log('successfully logged out');
+                return true;
+            },
+            onFailure(err) {
+                console.error(JSON.stringify(err));
+                return false;
+            }
+        });
+    }
 }

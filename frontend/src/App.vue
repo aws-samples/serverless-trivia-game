@@ -21,93 +21,106 @@
         color="primary"
         title=""
     >   
-        <v-toolbar-title @click="closemenu('home')" class="black--text"><v-icon>mdi-home</v-icon>Welcome to {{ appName }}</v-toolbar-title>
-        <v-spacer></v-spacer>
-<!--        <v-avatar color="accent" size="24" v-if="isLoggedIn()" class="mr-2">
-            <img v-if="avatar" :src="avatar" :alt="username"/>
-            <v-icon v-else dark>mdi-account-circle</v-icon>
-        </v-avatar>-->
-        <v-toolbar-title v-if="isLoggedIn" class="black--text">Hi {{ username }}</v-toolbar-title>
-        <v-tooltip v-if="isConnected===false" bottom><template v-slot:activator="{ on, attrs }"><v-btn v-bind="attrs" icon><v-icon color="green" class="black--text">mdi-cloud-off-outline</v-icon></v-btn></template><span>WebSockets Disconnected</span></v-tooltip>
-        <v-tooltip v-if="isConnected===true" bottom><template v-slot:activator="{ on, attrs }"><v-btn v-bind="attrs" icon><v-icon color="green" class="black--text">mdi-cloud-check-outline</v-icon></v-btn></template><span>WebSockets Connected</span></v-tooltip>
-        <v-tooltip v-if="isIoTConnected===false" bottom><template v-slot:activator="{ on, attrs }"><v-btn v-bind="attrs" vicon><v-icon color="blue" class="black--text">mdi-cloud-off-outline</v-icon></v-btn></template><span>MQTT Disconnected</span></v-tooltip>
-        <v-tooltip v-if="isIoTConnected===true" bottom><template v-slot:activator="{ on, attrs }"><v-btn v-bind="attrs" icon><v-icon color="blue" class="black--text">mdi-cloud-check-outline</v-icon></v-btn></template><span>MQTT Connected</span></v-tooltip>
+        <v-btn icon @click="closemenu('home')"><v-icon>mdi-home</v-icon></v-btn>
+        <v-toolbar-title class="black--text">Welcome to {{ appName }}</v-toolbar-title>
+        <v-avatar v-if="!isLoggedIn()" size="24" color="info" class="mr-2">
+            <v-icon icon="mdi-account-circle"></v-icon>
+        </v-avatar>
+        <v-avatar size="24" v-if="isLoggedIn()" class="mr-2">
+            <v-img v-if="avatar!==''" :src="avatar" :alt="username"/>
+            <v-icon v-else icon="mdi-account-circle"></v-icon>
+        </v-avatar>
+        <v-tooltip v-if="isConnected===false" bottom><template v-slot:activator="{ attrs }"><v-btn v-bind="attrs" icon><v-icon color="green" class="black--text">mdi-cloud-off-outline</v-icon></v-btn></template><span>WebSockets Disconnected</span></v-tooltip>
+        <v-tooltip v-if="isConnected===true" bottom><template v-slot:activator="{ attrs }"><v-btn v-bind="attrs" icon><v-icon color="green" class="black--text">mdi-cloud-check-outline</v-icon></v-btn></template><span>WebSockets Connected</span></v-tooltip>
+        <v-tooltip v-if="isIoTConnected===false" bottom><template v-slot:activator="{ attrs }"><v-btn v-bind="attrs" icon><v-icon color="blue" class="black--text">mdi-cloud-off-outline</v-icon></v-btn></template><span>MQTT Disconnected</span></v-tooltip>
+        <v-tooltip v-if="isIoTConnected===true" bottom><template v-slot:activator="{ attrs }"><v-btn v-bind="attrs" icon><v-icon color="blue" class="black--text">mdi-cloud-check-outline</v-icon></v-btn></template><span>MQTT Connected</span></v-tooltip>
     </v-app-bar>
-    <v-container>
-        <v-col cols="12">
-            <v-row><v-col cols="3"></v-col><v-col cols="6"><v-img name='logo' center :src="imgLogo"/></v-col><v-col cols="2"></v-col></v-row>
-      <v-row><v-col cols="3"></v-col><v-col cols="6">
-          <CognitoUI v-if=!isLoggedIn v-on:loginuser="loginuser" v-on:signupuser="signupuser" v-on:forgotpassword="forgotpassword"/>
-      </v-col><v-col cols=3></v-col></v-row></v-col>
-          <div id="app" v-if=isLoggedIn>
-                    <!-- TODO: Add this back in <Notifications /> -->
-                    <v-container v-if="getUIMode==='home'">
-                        <v-col cols="12"><v-row><v-col cols="3"></v-col>
-                        <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('chat')">
-                            <v-card-title><v-icon>mdi-chat</v-icon>Chat</v-card-title>
-                            <v-card-text>Chat with other players</v-card-text>
-                        </v-card></v-col>
-                        <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('play')">
-                            <v-card-title><v-icon>mdi-brain</v-icon>Play</v-card-title>
-                            <v-card-text>Play a Game</v-card-text>
-                        </v-card></v-col>
-                        </v-row>
-                        <v-row><v-col cols="3"></v-col>
-                        <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('adminmanagequiz')">
-                            <v-card-title><v-icon>mdi-pencil</v-icon>Manage</v-card-title>
-                            <v-card-text>Create and Edit Your Quizzes</v-card-text>
-                        </v-card></v-col>
-                        <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('adminhost')">
-                            <v-card-title><v-icon>mdi-run-fast</v-icon>Run</v-card-title>
-                            <v-card-text>Host Single-player and Multiplayer Games</v-card-text>
-                        </v-card></v-col>
-                        </v-row>
-                        <v-row><v-col cols="3"></v-col>
-                        <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('profile')">
-                            <v-card-title><v-icon>mdi-account-details</v-icon>Profile</v-card-title>
-                            <v-card-text>Manage your profile</v-card-text>
-                        </v-card></v-col>
-                        <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('marketplace')">
-                            <v-card-title><v-icon>mdi-cart</v-icon>Marketplace</v-card-title>
-                            <v-card-text>Search for games to buy</v-card-text>
-                        </v-card></v-col></v-row>
-                        <v-row><v-col cols="3"></v-col>
-                        </v-row></v-col>
-                    </v-container>
+    <v-main>
+        <v-container fluid>
+        <div>
+            <v-table>
+            <v-col cols="12">
+                <v-row><v-col cols="3"></v-col><v-col cols="6"><v-img name='logo' center :src="require('./assets/simpletriviaservicelogo.png')"/></v-col><v-col cols="2"></v-col></v-row>
+        <v-row><v-col cols="3"></v-col><v-col cols="6">
+            <CognitoUI v-if=!isLoggedIn() v-on:loginuser="loginuser" v-on:signupuser="signupuser" v-on:forgotpassword="forgotpassword"/>
+        </v-col><v-col cols=3></v-col></v-row></v-col>
+            <div id="app" v-if=isLoggedIn()>
+                <template>
+                    <v-snackbar v-model="snackbar" :timeout="5000" :color="message.result" elevation="24">
+                        {{ message }}
+                            <v-btn
+                            color="white"
+                            text
+                            @click="snackbar = false"
+                            >
+                            Close
+                            </v-btn>
+                    </v-snackbar>
+                </template>
+                <v-container v-if="getUIMode==='home'">
+                    <v-col cols="12"><v-row><v-col cols="3"></v-col>
+                    <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('chat')">
+                        <v-card-title><v-icon>mdi-chat</v-icon>Chat</v-card-title>
+                        <v-card-text>Chat with other players</v-card-text>
+                    </v-card></v-col>
+                    <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('play')">
+                        <v-card-title><v-icon>mdi-brain</v-icon>Play</v-card-title>
+                        <v-card-text>Play a Game</v-card-text>
+                    </v-card></v-col>
+                    </v-row>
+                    <v-row><v-col cols="3"></v-col>
+                    <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('adminmanagequiz')">
+                        <v-card-title><v-icon>mdi-pencil</v-icon>Manage</v-card-title>
+                        <v-card-text>Create and Edit Your Quizzes</v-card-text>
+                    </v-card></v-col>
+                    <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('adminhost')">
+                        <v-card-title><v-icon>mdi-run-fast</v-icon>Run</v-card-title>
+                        <v-card-text>Host Single-player and Multiplayer Games</v-card-text>
+                    </v-card></v-col>
+                    </v-row>
+                    <v-row><v-col cols="3"></v-col>
+                    <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('profile')">
+                        <v-card-title><v-icon>mdi-account-details</v-icon>Profile</v-card-title>
+                        <v-card-text>Manage your profile</v-card-text>
+                    </v-card></v-col>
+                    <v-col cols="3"><v-card height="150px" color="accent" v-on:click="closemenu('marketplace')">
+                        <v-card-title><v-icon>mdi-cart</v-icon>Marketplace</v-card-title>
+                        <v-card-text>Search for games to buy</v-card-text>
+                    </v-card></v-col></v-row>
+                    <v-row><v-col cols="3"></v-col>
+                    </v-row></v-col>
+                </v-container>
                 <ChatController v-if="getUIMode==='chat'" msg="send chat" v-on:send-iot-message="publishIoTMessage"/><br>
                 <GameController v-if="getUIMode==='play'" v-on:send-raw-message="sendmessage" v-on:send-iot-message="publishIoTMessage" v-on:subscribe-iot-topic="subscribeIoTTopic"/>
                 <Player v-if="getUIMode==='profile'"/>
                 <AdminController v-if="getUIMode==='admin'" v-on:send-message="sendmessage" v-on:send-iot-message="publishIoTMessage" v-on:subscribe-iot-topic="subscribeIoTTopic"/>
                 <Marketplace v-if="getUIMode==='marketplace'" :marketplace-listings="marketplacelist"/>
-          </div>
-        <v-row class="mb-6"><v-col cols="12">
-            <signout v-if=isLoggedIn v-on:signout="signout"></signout>
-        </v-col></v-row>
-        <v-img name='logo' center src="imgLogo"/>
-
-    </v-container>
+            </div>
+            <v-row class="mb-6"><v-col cols="12">
+                <signout v-if=isLoggedIn() v-on:signout="signout"></signout>
+            </v-col></v-row>
+        </v-table>
+        </div>
+    </v-container></v-main>
     </v-app>
 </template>
 
 
 <script>
-import { reactive, defineComponent } from 'vue'
+import { defineComponent } from 'vue'
 import CognitoUI from './components/CognitoUI.vue'
 import GameController from './components/GameController.vue'
 import ChatController from './components/ChatController.vue'
 import AdminController from './components/AdminController.vue'
 import Player from './components/Player.vue'
-//import Notifications from './components/Notifications.vue'
 import Marketplace from './components/Marketplace.vue'
 import Signout from './components/Signout.vue'
 import { DataService } from '@/services/DataServices.js'
 import { AWSConfig } from '@/services/AWSConfig.js';
-import { login, signup, triggerforgotpw, resetforgotpw, cognitosignout } from '@/services/Cognito.js';
-import * as AwsIot from 'aws-iot-device-sdk'
-import * as AWS from 'aws-sdk'
-import { useGameStore } from '@/stores/game.js'
-import * as imgLogo from '@/assets/simpletrivaservicelogo.png'
-
+import { login, signup, triggerforgotpw, resetforgotpw, cognitosignout, AWSCognitoCredentialsProvider } from '@/services/Cognito.js';
+import {mqtt5, iot} from "aws-iot-device-sdk-v2";
+import { useGameStore } from '@/store/game.js';
+import {once} from "events";
 export default defineComponent({
     name: 'App',
     components: {
@@ -116,7 +129,6 @@ export default defineComponent({
       AdminController: AdminController,
       CognitoUI: CognitoUI,
       Player: Player,
-//      Notifications: Notifications,
       Marketplace: Marketplace,
       Signout: Signout
     },
@@ -166,8 +178,7 @@ export default defineComponent({
         playerlevel,
         playerWallet,
         marketplacelist,
-        topicSubscriptions,
-        imgLogo
+        topicSubscriptions
       }
     },
 
@@ -178,14 +189,15 @@ export default defineComponent({
           return gameStore.user.username},
         avatar: function() { 
           const gameStore = useGameStore()
-          return gameStore.user.picture},
+          if (gameStore.user.picture===undefined) {
+            return ''
+          } else {
+            return gameStore.user.picture
+          }
+        },
         myjwt: function() { 
           const gameStore = useGameStore()
           return gameStore.user.cognito.idToken.jwtToken},
-        isLoggedIn: function() {
-          const gameStore = useGameStore()
-          return gameStore.cognito.authState === 'signedin'
-          },
         isConnected: function() {
           const gameStore = useGameStore()
           return gameStore.ws.connected},
@@ -230,7 +242,9 @@ export default defineComponent({
         { text: 'Account Details', icon: 'mdi-account-details', action:'chat'},
       ],
       authState: '',
-      IoTConnected: false
+      IoTConnected: false,
+      snackbar: false,
+    message: ''
     }),
     methods: {
 
@@ -246,9 +260,7 @@ export default defineComponent({
                 this.cleargameinfo()
                 gameStore.games.gamelist = []
                 gameStore.gamemode = 'showgames'
-/*                 this.$store.commit('setGameList', [])
-                this.$store.commit('setGameState', 'showgames')
- */                uimode = 'play'
+                uimode = 'play'
                 break
             case 'adminhost':
                 await this.listHostGames();
@@ -257,7 +269,6 @@ export default defineComponent({
             case 'adminnewquiz':
                 uimode='admin'
                 gameStore.adminmode = 'showheader'
-                //this.$store.commit('setAdminMode','showheader')
                 break
             case 'adminmanagequiz':
                 await this.listMyGames()
@@ -282,10 +293,7 @@ export default defineComponent({
                 console.log(menuitem)
         }
         gameStore.uimode = uimode
-        console.info(` setting ${gameStore.uimode}`)
         gameStore.live.player.live = false
-/*        this.$store.commit('setUIMode', uimode)
-        this.$store.commit('setLivePlayerMode', false);*/
     },
 
 
@@ -296,7 +304,11 @@ export default defineComponent({
         gameStore.cognito.authState = state
         this.authState = gameStore.cognito.authState
         console.info(`${gameStore.cognito.authState}`)
-        //TODO: Add in connect() if state === loggedin
+      },
+
+      isLoggedIn() {
+        const gameStore = useGameStore();
+        return gameStore.cognito.authState === 'signedin'
       },
 
       async signout() {
@@ -307,8 +319,6 @@ export default defineComponent({
         gameStore.user.username = ''
         gameStore.ws.connected = false
         gameStore.mqtt.connected = false
-        this.$store.commit('setUserCognito', null)
-        this.$store.commit('setUserName', '')
         this.setAuthState('')
         await cognitosignout()
       },
@@ -391,7 +401,6 @@ export default defineComponent({
       },
 
       async forgotpassword(username) {
-//        var self = this;
         const gameStore = useGameStore()        
         this.clearCognitoMessages()
         if(username==='') {
@@ -403,7 +412,7 @@ export default defineComponent({
         triggerforgotpw(username)
           .then(function(data){
               gameStore.cognito.statustext = data
-              gameStore.cogntio.status = true
+              gameStore.cognito.status = true
           })
           .catch(function(err){
               gameStore.cognito.errortext = err.message || JSON.stringify(err)
@@ -412,7 +421,6 @@ export default defineComponent({
       },
 
       async resetforgotpassword(username, code, password) {
-//        var self = this;
         const gameStore = useGameStore()        
         this.clearCognitoMessages()
         resetforgotpw(username, code, password)
@@ -427,6 +435,7 @@ export default defineComponent({
         })
       },
 
+      /*
       async signout() {
         const gameStore = useGameStore()
         this.ws.close()
@@ -438,6 +447,7 @@ export default defineComponent({
         this.setAuthState('notLoggedIn')
         await cognitosignout()
       },
+      */
 
       clearCognitoLocalStorage() {
         let len = localStorage.length;
@@ -450,81 +460,145 @@ export default defineComponent({
       },
 
   //BEGIN: Generic IoT Function Calls
-      subscribeIoTTopic(topic) {
+      async subscribeIoTTopic(topic) {
           console.log('subscribing to ', topic);
-          if(this.IoTWSDevice) {
-              this.topicSubscriptions.pop(topic);
-              this.IoTWSDevice.subscribe(topic);
-          }
+            if(this.IoTWSDevice) {
+                if(!this.topicSubscriptions.includes(topic)) {
+                    this.topicSubscriptions.pop(topic);
+                }
+                const suback = await this.IoTWSDevice.subscribe({subscriptions: 
+                    [{qos: mqtt5.QoS.AtLeastOnce, topicFilter: topic}]});
+                console.log(`subscription ack: ${JSON.stringify(suback)}`)
+            }
       },
 
-      publishIoTMessage(topic, msg) {
-          console.log(`${topic} ${msg}`);
+      async publishIoTMessage(topic, msg) {
+          console.log(`sending IOT ${topic} ${msg}`);
           if(this.IoTWSDevice) {
-              this.IoTWSDevice.publish(topic, msg, { qos: 1 }, function (err) {
-                  if (err) {
-                      console.error("failed to publish iot message!");
-                      console.error(err);
-                  } else {
-                      console.info("Message Published", "Topic: " + topic, "Message: " + msg);
-                  }
-              });
-          }
+              await this.IoTWSDevice.publish({qos:1, topicName: topic, payload: msg})
+              console.log(`published to topic ${topic} ${msg}`)
+            }
+      },
+
+      async setupSubscriptions() {
+        let i;
+        for(i=0; i<this.topicSubscriptions.length; i++) {
+            this.subscribeIoTTopic(this.topicSubscriptions[i])
+        }
+      },
+
+      async buildIoTDevice(clientId) {
+        let self = this;
+        const gameStore = useGameStore()
+
+        const options = { IdentityPoolId: AWSConfig.identityPoolId, 
+            Region: AWSConfig.region};
+
+        const provider = new AWSCognitoCredentialsProvider(options);
+        
+        await provider.refreshCredentials();
+
+        let wsConfig = {
+            credentialsProvider: provider,
+            region: AWSConfig.region
+        };
+
+        let builder = new iot.AwsIotMqtt5ClientConfigBuilder.newWebsocketMqttBuilderWithSigv4Auth(
+            AWSConfig.iotapi,
+            wsConfig
+        );
+        
+        builder.withConnectProperties({keepAliveIntervalSeconds:15, clientId: clientId});
+
+        this.IoTWSDevice = new mqtt5.Mqtt5Client(builder.build());
+
+        console.log(`adding handlers`);
+        this.IoTWSDevice.on('connectionSuccess', function (eventData) {
+            console.log("MQTT Connection Success event");
+            console.log ("Connack: " + JSON.stringify(eventData.connack));
+            console.log ("Settings: " + JSON.stringify(eventData.settings));
+            self.setupSubscriptions();
+            gameStore.mqtt.connected = true;
+        });
+        this.IoTWSDevice.on('attemptingConnect', function () {
+            console.info("MQTT attempting connect");
+        });
+        this.IoTWSDevice.on('connectionFailure', (eventData) => {
+            console.error(`MQTT Connection failure event: ${eventData.error.toString()}`);
+            gameStore.mqtt.connected = false;
+        });        
+        this.IoTWSDevice.on('connectionFailure', (eventData) => {
+            console.error(`Connection failure event: ${eventData.error.toString()}`);
+            gameStore.mqtt.connected = false;
+        });
+        this.IoTWSDevice.on('messageReceived', function (eventData) {
+            console.log(`${JSON.stringify(eventData)}`);
+            const msg = JSON.parse(JSON.stringify(eventData.message));
+            let payload = {};
+            if (eventData.message.payload) {
+                //all messages for Simple Trivia Service are JSON
+                payload = JSON.parse(Buffer.from(eventData.message.payload, 'utf-8'));
+                console.log(`  with payload: ${JSON.stringify(payload)}`);
+                self.handleIoTMessage(msg.topicName, payload);
+            } else {
+                self.handleIoTMessage(msg.topicName, {});
+            }
+        });
+        this.IoTWSDevice.on('error', function(eventData){
+            console.error(`MQTT error: Connection failure event: ${eventData.error.toString()}`);
+        });
+        this.IoTWSDevice.on('disconnection', function(eventData) {
+            console.log("MQTT Disconnection event: " + eventData.error.toString());
+            if (eventData.disconnect !== undefined) {
+                console.log('Disconnect packet: ' + JSON.stringify(eventData.disconnect));
+            }
+            gameStore.mqtt.connected = false;
+        });
+        this.IoTWSDevice.on('stopped', (eventData) => {
+            console.log(`Stopped event ${JSON.stringify(eventData)}`);
+            gameStore.mqtt.connected = false;
+        });
       },
 
       async connectIoTDevice(clientId) {
-          const gameStore = useGameStore()
-          let self = this;
-          this.IoTWSDevice = AwsIot.device({
-              clientId: clientId,
-              host: AWSConfig.iotapi,
-              protocol: 'wss',
-              accessKeyId: AWS.config.credentials.accessKeyId,
-              secretKey: AWS.config.credentials.secretAccessKey,
-              sessionToken: AWS.config.credentials.sessionToken,
-              debug: false
-          });
-          this.IoTWSDevice.on('connect', function () {
-              console.info("MQTT connected");
-              gameStore.mqtt.connected = true
-          });
-          this.IoTWSDevice.on('message', function (topic, payload) {
-              const msg = JSON.parse(payload.toString());
-              console.info('IoT msg: ', topic, JSON.stringify(msg));
-              self.handleIoTMessage(topic, msg);
-          });
-          this.IoTWSDevice.on('error', function(err){
-              console.error('MQTT error', err);
-          });
-          this.IoTWSDevice.on('disconnect', function(data) {
-              console.info('MQTT disconnected', JSON.stringify(data));
-              gameStore.mqtt.connected = false;
-          });
-      },
+        console.log(`iotConnectToDevice with ${clientId}`)
 
-      async attachPrincipalPolicy() {
-          let principal = AWS.config.credentials.identityId;
-          console.log("IdentityId: " + principal);
-          let parms = { jwt: this.myjwt, identityId: principal };
-          try{
-              return await DataService.attachPrincipalPolicy(parms);
-          } catch(err){
-              console.error(JSON.stringify(err));
-          }
+        await this.buildIoTDevice(clientId);
+
+        const attemptingConnect = once(this.IoTWSDevice, "attemptingConnect");
+        const connectionSuccess = once(this.IoTWSDevice, "connectionSuccess");        
+       
+        console.log(`starting IoT device`)
+        this.IoTWSDevice.start()
+
+        await attemptingConnect;
+        await connectionSuccess;
       },
 
       async initIoTConnect(clientId) {
-          try {
-              await this.connectIoTDevice(clientId);
-              return true;
-          } catch(err) {
-              console.log(JSON.stringify(err));
-              return false;
-          }z
+        try {
+            await this.connectIoTDevice(clientId);
+            console.log(`MQTT connection state = ${this.IoTWSDevice.state}`)
+            return true;
+        } catch(err) {
+            console.log(JSON.stringify(err.message));
+            return false;
+        }
       },
 
-      resetBlitz() {
+      async resetBlitz() {
           const gameStore = useGameStore()
+          console.log(`beginning unsubscribe`)
+          const topics = [
+            `games/${gameStore.live.player.gameKey}/question`,
+            `games/${gameStore.live.player.gameKey}/joined/+`,
+            `games/${gameStore.live.player.gameKey}/results/${this.username}`,
+            `games/${gameStore.live.player.gameKey}/scoreboard`,
+            `games/${gameStore.live.player.gameKey}/gameover`,
+            `games/${gameStore.live.player.gameKey}/playercorrect`,
+            `games/${gameStore.live.player.gameKey}/endthegame`
+          ]
+          await this.IoTWSDevice.unsubscribe({topicFilters: topics})
           gameStore.uimode = 'home'
           gameStore.live.player.gameid = ''
           gameStore.live.player.uimode = 'lobby'
@@ -542,6 +616,7 @@ export default defineComponent({
       handleIoTMessage(topic, msg) {
         const gameStore = useGameStore()
         const main = topic.split('/');
+        let avatar_data = {}
         if(main.length>2) {
             switch(main[2]) {
                 case 'questionlist':
@@ -609,7 +684,7 @@ export default defineComponent({
                     this.resetBlitz();
                     break;
                 default:
-                    console.log(`unhandled ${topic} - ${JSON.stringify(msg)}`);
+                    console.log(`unhandled in game ${topic} - ${JSON.stringify(msg)}`);
                     console.log(main[2]);
                     console.log(main[3]);
                     break;
@@ -617,13 +692,25 @@ export default defineComponent({
             } else {
                 switch(main[1]) {
                     case 'globalchat':
-                    console.log(msg.message);
-                    gameStore.chat.global.unshift(msg.message + "\r\n")
-                    break;
-                default:
-                    console.log(`unhandled ${topic} - ${JSON.stringify(msg)}`);
-                    console.log(main[1])
-                    break;
+                        console.log(msg.message);
+                        gameStore.chat.global.unshift(msg.message + "\r\n")
+                        break;
+                    case this.username:
+                        console.log(`avatar message`);
+                        console.log(`${JSON.stringify(msg)}`)
+                        console.log(`${JSON.stringify(msg.body)}`)
+                        this.message = msg.body
+                        this.snackbar = true
+                        if(msg.body!=='Avatar rejected') {
+                            avatar_data = JSON.parse(msg.data)
+                            gameStore.user.picture = avatar_data.avatar
+                            gameStore.profile.avatar = avatar_data.avatar
+                        }
+                        break;
+                    default:
+                        console.log(`unhandled ${topic} - ${JSON.stringify(msg)}`);
+                        console.log(`${this.username} - ${main[1]} - ${this.username===main[1]}`)
+                        break;
                 }
             }
       },
@@ -637,7 +724,7 @@ export default defineComponent({
 
   //BEGIN: Genericized WebSocket Calls and Handlers
       async connect() {
-          console.log(`connect is called`)
+          console.log(`ws connect is called`)
           const gameStore = useGameStore()
           let self = this;
           if(!gameStore.ws.connected) {
@@ -679,13 +766,12 @@ export default defineComponent({
           console.log('clientId', this.clientId);
 
           if(!gameStore.mqtt.connected) {
-              if(await this.attachPrincipalPolicy()){
-                  console.log('trying to connect to iot');
-                  if(!await this.initIoTConnect(this.clientId)) {
-                      console.error('error attaching to MQTT WS');
-                  }
-                  this.subscribeIoTTopic("chat/globalchat")
-              }
+            console.log('trying to connect to iot');
+            if(!await this.initIoTConnect(this.clientId)) {
+                console.error('error attaching to MQTT WS');
+            }
+            this.subscribeIoTTopic("chat/globalchat")
+            this.subscribeIoTTopic(`notifications/${this.username}`)
           }
           
       },
@@ -693,19 +779,21 @@ export default defineComponent({
       sendmessage(msg) {
           const gameStore = useGameStore()
           console.log("outbound--" + msg);
-          if(this.ws.readyState===1) {
+          let self = this;
+          if(self.ws.readyState===1) {
               try {
-                  this.ws.send(msg);
+                  self.ws.send(msg);
               } catch(e) {
+                  console.log(`could not send websockets message`)
                   console.log(JSON.stringify(e));
-                  this.ws.close();
+                  self.ws.close();
                   gameStore.ws.connected = false
-                  this.connect();
+                  self.connect();
               }
           } else {
               console.log(this.ws.readyState);
               alert('currently not connected!');  
-              this.ws.close();
+              self.ws.close();
               this.connect();
           }
       },
@@ -926,7 +1014,6 @@ export default defineComponent({
             }
         }
         let userkey = {};
-        // should this be playerName or jsut msg?
         userkey.playerName = msg.playerName;
         userkey.score = 0;
         userkey.answered='';
@@ -1015,7 +1102,7 @@ export default defineComponent({
       },
     },
 
-    destroyed() {
+    unmounted() {
         const gameStore = useGameStore()
         gameStore.ws.conneected = false
         if(!this.ws===null)

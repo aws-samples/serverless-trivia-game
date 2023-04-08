@@ -1,0 +1,222 @@
+{
+  "Comment": "Player avatar processing Step Function",
+  "StartAt": "ParseForUser",
+  "States": {
+    "ParseForUser": {
+      "Type": "Pass",
+      "Next": "Parallel",
+      "Parameters": {
+        "username.$": "States.ArrayGetItem(States.StringSplit($.object.key, '//'), 0)"
+      },
+      "ResultPath": "$.parsedProfile"
+    },
+    "Parallel": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Moderate",
+          "States": {
+            "Moderate": {
+              "Type": "Task",
+              "Parameters": {
+                "Image": {
+                  "S3Object": {
+                    "Bucket.$": "$.bucket.name",
+                    "Name.$": "$.object.key"
+                  }
+                },
+                "MinConfidence": 75
+              },
+              "Resource": "arn:aws:states:::aws-sdk:rekognition:detectModerationLabels",
+              "ResultPath": "$.moderation",
+              "ResultSelector": {
+                "labels.$": "$.ModerationLabels"
+              },
+              "Next": "Label Detected?"
+            },
+            "Label Detected?": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.moderation.labels[0]",
+                  "IsPresent": true,
+                  "Next": "DeleteObject"
+                }
+              ],
+              "Default": "CreateThumbnail"
+            },
+            "CreateThumbnail": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${ThumbnailFunction}",
+                "Payload": {
+                  "bucketName.$": "$.bucket.name",
+                  "key.$": "$.object.key"
+                },
+                "Qualifier": "Live"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException"
+                  ],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 6,
+                  "BackoffRate": 2
+                }
+              ],
+              "ResultPath": "$.profile",
+              "ResultSelector": {
+                "avatar.$": "States.Format('https://${DistributionUrl}/{}', $.Payload.key)",
+                "thumbnail.$": "States.Format('https://${DistributionUrl}/{}', $.Payload.key)",
+                "username.$": "$.Payload.username"
+              },
+              "Next": "ProfileUpdate"
+            },
+            "ProfileUpdate": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "DynamoDBUpdate",
+                  "States": {
+                    "DynamoDBUpdate": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::dynamodb:updateItem",
+                      "Parameters": {
+                        "TableName": "${PlayerTable}",
+                        "Key": {
+                          "playerName": {
+                            "S.$": "$.parsedProfile.username"
+                          }
+                        },
+                        "UpdateExpression": "SET avatar = :avatar, thumbnail = :thumbnail",
+                        "ExpressionAttributeValues": {
+                          ":avatar": {
+                            "S.$": "$.profile.avatar"
+                          },
+                          ":thumbnail": {
+                            "S.$": "$.profile.thumbnail"
+                          }
+                        },
+                        "ReturnValues": "UPDATED_NEW"
+                      },
+                      "End": true,
+                      "ResultPath": "$.dynamoUpdateResult"
+                    }
+                  }
+                },
+                {
+                  "StartAt": "CognitoUpdate",
+                  "States": {
+                    "CognitoUpdate": {
+                      "Type": "Task",
+                      "End": true,
+                      "Parameters": {
+                        "UserAttributes": [
+                          {
+                            "Name": "picture",
+                            "Value.$": "$.profile.thumbnail"
+                          }
+                        ],
+                        "UserPoolId": "${CognitoUserPoolId}",
+                        "Username.$": "$.parsedProfile.username"
+                      },
+                      "Resource": "arn:aws:states:::aws-sdk:cognitoidentityprovider:adminUpdateUserAttributes",
+                      "ResultPath": "$.cognitoUpdateResult"
+                    }
+                  }
+                }
+              ],
+              "Next": "Publish Accepted"
+            },
+            "Publish Accepted": {
+              "Type": "Task",
+              "Parameters": {
+                "Entries": [
+                  {
+                    "Detail": {
+                      "playerName.$": "$[0].parsedProfile.username",
+                      "result": "success",
+                      "message": "Avatar accepted",
+                      "data.$": "States.JsonToString($[0].profile)",
+                      "topic": "avatar"
+                    },
+                    "DetailType": "Avatar Processing Completed",
+                    "EventBusName": "${EventBusName}",
+                    "Source": "${EventSource}"
+                  }
+                ]
+              },
+              "Resource": "arn:aws:states:::aws-sdk:eventbridge:putEvents",
+              "End": true
+            },
+            "DeleteObject": {
+              "Type": "Task",
+              "Parameters": {
+                "Bucket.$": "$.bucket.name",
+                "Key.$": "$.object.key"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:s3:deleteObject",
+              "ResultPath": "$.s3DeleteResult",
+              "Next": "Publish Rejected"
+            },
+            "Publish Rejected": {
+              "Type": "Task",
+              "Parameters": {
+                "Entries": [
+                  {
+                    "Detail": {
+                      "playerName.$": "$.parsedProfile.username",
+                      "result": "error",
+                      "message": "Avatar rejected",
+                      "data.$": "States.JsonToString($.moderation)",
+                      "topic": "avatar"
+                    },
+                    "DetailType": "Avatar Processing Completed",
+                    "EventBusName": "${EventBusName}",
+                    "Source": "${EventSource}"
+                  }
+                ]
+              },
+              "Resource": "arn:aws:states:::aws-sdk:eventbridge:putEvents",
+              "End": true
+            }
+          }
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "PublishError"
+        }
+      ],
+      "End": true
+    },
+    "PublishError": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Parameters": {
+        "Entries": [
+          {
+            "Detail": {
+              "playerName.$": "$.parsedProfile.username",
+              "result": "error",
+              "message": "Avatar Workflow Exception",
+              "data": "{\"reason\":\"An unexpected error occured while processing the avatar.\"}",
+              "topic": "avatar"
+            },
+            "DetailType": "Avatar Processing Failed",
+            "EventBusName": "${EventBusName}",
+            "Source": "${EventSource}"
+          }
+        ]
+      },
+      "End": true
+    }
+  }
+}

@@ -90,7 +90,7 @@
                     </v-card>
                 </v-row>
             </v-card>
-            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="closelist">Close List</v-btn>
+            <v-btn x-large block color=button-main class="white--text" v-on:click="closelist">Close List</v-btn>
         </span>
     </div>
 </template>
@@ -98,10 +98,10 @@
 <script>
 import { defineComponent } from 'vue'
 import { DataService } from '@/services/DataServices.js'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent ({
-    name: 'Hostgame',
+    name: 'host-game',
     emits: ['send-message', 'send-iot-message', 'subscribe-iot-topic'],
     data: function() { return {
         quizName: '',
@@ -142,6 +142,7 @@ export default defineComponent ({
                 gameStore.live.admin.gameId = results.data.gameId
                 gameStore.live.admin.gameType = results.data.quizMode
                 gameStore.live.admin.questionType = results.data.questionType
+                console.log(`full game data for websockets ${JSON.stringify(gameStore.live.admin)}`)
             } else {
                 gameStore.live.blitz.gameOver = false
                 gameStore.live.admin.gameKey = `${game.gameId}:${this.username}`

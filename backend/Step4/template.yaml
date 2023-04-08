@@ -1,0 +1,2116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  REST API Backend for Simple Trivia Service
+
+Parameters:
+  EMFNamespace:
+    Type: String
+    Default: 'STS'
+  LogRetentionDays:
+    Type: Number
+    Description: Number of days to retain CloudWatch Logs for
+    Default: 7
+  ResourceGroupPrefix:
+    Type: String
+    Description: Prefix of the ResourceGroup for resources in this template
+    Default: 'GameService'
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Layers:
+      - !Sub arn:aws:lambda:${AWS::Region}:094274105915:layer:AWSLambdaPowertoolsTypeScript:5
+      - !Sub arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14
+    Runtime: nodejs18.x
+    Handler: app.handler
+    MemorySize: 512 
+    Timeout: 10
+    Tracing: Active
+    Environment:
+      Variables:
+        AWS_EMF_NAMESPACE: !Sub "${EMFNamespace}"
+        MAIN_CORS_DOMAIN: "*"
+        
+Resources:
+  ResourceGroup:
+    Type: "AWS::ResourceGroups::Group"
+    Properties:
+      Name: !Join ["-", [!Sub "${ResourceGroupPrefix}", "REST"]]
+
+  UtilsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'utilslayer--${AWS::StackName}'
+      Description: Utils layer to be used by different lambda functions
+      ContentUri: dependencies/utilslayer/nodejs/
+      CompatibleRuntimes:
+        - nodejs18.x
+      LicenseInfo: 'MIT'
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: nodejs18.x       
+
+  MyGamesListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/mygames_list/
+      MemorySize: 512
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME:  !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTPHost
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  MyGamesListFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub ${LogRetentionDays}
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref MyGamesListFunction]]
+
+  PlayerGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/player_get/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_TABLE_NAME: !ImportValue STS-PlayerTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTPPlayer
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  PlayerGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerGetFunction]]
+
+  PlayerPutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/player_put/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_TABLE_NAME: !ImportValue STS-PlayerTable
+          PLAYER_AVATAR_BUCKET: !Ref AvatarBucket
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !ImportValue STS-PlayerTable
+        - S3CrudPolicy:
+            BucketName: !Ref AvatarBucket
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTPPlayer
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  PlayerPutFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerPutFunction]]
+
+  PlayerProgressGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/playerprogression_get/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_PROGRESS_TABLE_NAME: !ImportValue STS-PlayerProgressTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerProgressTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTPPlayer
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  PlayerProgressGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerProgressGetFunction]]
+
+  GameGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/game_get/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME: !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTP
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  GameGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameGetFunction]]
+
+  LeaderboardGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/leaderboard_get/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          SCOREBOARD_TABLE_NAME: !ImportValue STS-HighScoreTable
+          CLOUDFRONT_DOMAIN: !GetAtt PlayerAvatarDistribution.DomainName
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-HighScoreTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTP
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  LeaderboardGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref LeaderboardGetFunction]]
+
+  GameHeaderPutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/gameheader_put/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE: !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTPAdmin
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  GameHeaderPutFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameHeaderPutFunction]]
+
+  GamePlayFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/game_play/
+      MemorySize: 1536
+      Layers:
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME: !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTP
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  GamePlayFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GamePlayFunction]]
+  ActiveGamesListFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: ./functions/activegames_list/
+      MemorySize: 1536
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME: !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+      Tags:
+        Dashboard: HTTPHost
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  ActiveGamesListFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub ${LogRetentionDays}
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref ActiveGamesListFunction]]
+
+  ActiveGamesDeleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/activegames_delete/
+      MemorySize: 1536
+      Layers:
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME: !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        DeleteGameEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              detail-type:
+                - "Websockets.game_end"
+                - "IoT.game_end"
+            RetryPolicy:
+              MaximumRetryAttempts: 5
+              MaximumEventAgeInSeconds: 60
+            EventBusName: !ImportValue STS-STSEventBusName
+      Tags:
+        Dashboard: HTTP
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  ActiveGamesDeleteFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref ActiveGamesDeleteFunction]]
+
+  GameHostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/game_host/
+      MemorySize: 1536
+      Layers:
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME: !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTP
+      Events:
+        DeleteGameEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              detail-type:
+                - "Websockets.game_host"
+                - "IoT.game_host"
+            RetryPolicy:
+              MaximumRetryAttempts: 5
+              MaximumEventAgeInSeconds: 60
+            EventBusName: !ImportValue STS-STSEventBusName
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  GameHostFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameHostFunction]]
+
+  GameAnswerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      Timeout: 15
+      MemorySize: 1024
+      CodeUri: functions/game_answer/
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME: !ImportValue STS-PlayerInventoryTable
+          PLAYER_PROGRESS_TOPIC: !ImportValue STS-PlayerProgressTopicArn
+          LEADERBOARD_TOPIC: !ImportValue STS-LeaderboardTopicArn
+          RESPONSE_STREAM: !ImportValue STS-QuizSourceStreamName
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !ImportValue STS-PlayerProgressTopicName
+        - SNSPublishMessagePolicy:
+            TopicName: !ImportValue STS-LeaderboardTopicName
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - KinesisCrudPolicy:
+            StreamName: !ImportValue STS-QuizSourceStreamName
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTP
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  GameAnswerFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameAnswerFunction]]
+
+  GameActivateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: functions/game_activate/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          PLAYER_INVENTORY_TABLE_NAME: !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTP
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  GameActivateFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameActivateFunction]]
+  PlayerWalletAddFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: functions/playerwallet_add/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          PLAYER_WALLET_TOPIC: !ImportValue STS-PlayerWalletTopicArn
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !ImportValue STS-PlayerWalletTopicName
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTPPlayer
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  PlayerWalletAddFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerWalletAddFunction]]
+
+  PlayerWalletGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: functions/playerwallet_get/
+      MemorySize: 1536
+      Environment:
+        Variables:
+          PLAYER_WALLET_TABLE_NAME: !ImportValue STS-PlayerWalletTable
+          REGION: !Sub ${AWS::Region}
+          TEST: Test
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerWalletTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: HTTPPlayer
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  PlayerWalletGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerWalletGetFunction]]
+
+  GameListOnMarketPlaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: functions/game_listonmarketplace/
+      MemorySize: 1024
+      Environment:
+        Variables:
+          MARKETPLACE_TABLE_NAME: !ImportValue STS-MarketplaceTable
+          PLAYER_INVENTORY_TABLE_NAME: !ImportValue STS-PlayerInventoryTable
+          REGION: !Sub ${AWS::Region}
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !ImportValue STS-MarketplaceTable
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: Marketplace
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  GameListOnMarketPlaceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref GameListOnMarketPlaceFunction]]
+
+  MarketplaceGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/marketplace_get/
+      MemorySize: 2048
+      Layers:
+        - !Ref UtilsLayer
+      Environment:
+        Variables:
+          MARKETPLACE_TABLE_NAME: !ImportValue STS-MarketplaceTable
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-MarketplaceTable
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: Marketplace
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  MarketplaceGetFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref MarketplaceGetFunction]]
+
+  AuthorizerPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-authorizerpolicy"] ]
+      Roles:
+        - !Ref AuthorizerRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Action: 
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource: !GetAtt AuthorizerLogGroup.Arn
+
+  AuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Authorizer Role
+      RoleName: !Join [ "", [!Ref "AWS::StackName", "STS.authorizer"] ]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'   
+
+  Authorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: HTTPLive
+      CodeUri: functions/authorizer/
+      MemorySize: 2048
+      Runtime: nodejs18.x
+      Role: !GetAtt AuthorizerRole.Arn
+      Environment:
+        Variables:
+          APPCLIENTID: !ImportValue STS-AppClientId
+          USERPOOLID: !ImportValue STS-UserPoolId
+          REGION: !Sub "${AWS::Region}"          
+      Tags:
+        Dashboard: Main
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  AuthorizerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref Authorizer]]
+
+  RESTApiRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Ref RESTManagedPolicy
+        
+  RESTManagedPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-RESTManagedPolicyforStepFunctions" ] ]      
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: "states:StartSyncExecution"
+            Resource: !Sub "${PurchaseGameStateMachine}"
+
+  STSRESTAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: STS-REST-API
+      EndpointConfiguration: 
+        Types:
+          - REGIONAL
+      Body: 
+        swagger: "2.0"
+        info:
+          version: "2022-12-08T20:41:10Z"
+          title: "stsrest"
+        basePath: "/prod"
+        schemes:
+        - "https"
+        paths:
+          /activegames:
+            get:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "category"
+                in: "query"
+                required: false
+                type: "string"
+              - name: "host"
+                in: "query"
+                required: false
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ActiveGamesListFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                passthroughBehavior: "when_no_match"
+                cacheNamespace: "ashkcg"
+                cacheKeyParameters:
+                - "method.request.querystring.category"
+                - "method.request.querystring.host"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /activegames/{gameId}:
+            post:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GameActivateFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /games:
+            post:
+              produces:
+              - "application/json"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GameHeaderPutFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /games/{gameId}/answer:
+            post:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GameAnswerFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /games/{gameId}/scoreboard:
+            get:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${LeaderboardGetFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /games/{gameId}/scoreboard/{playerId}:
+            get:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${LeaderboardGetFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /games/{gameId}/{playerId}:
+            get:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GamePlayFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /marketplace:
+            get:
+              produces:
+              - "application/json"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${MarketplaceGetFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            post:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                credentials: !Sub "arn:aws:iam::${AWS::AccountId}:role/${RESTApiRole}"
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:states:action/StartSyncExecution"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: !Sub "{\n    \"input\": \"$util.escapeJavaScript($input.json('$'))\"\
+                    ,\n    \"stateMachineArn\": \"${PurchaseGameStateMachine}\"\
+                    \n} "
+                passthroughBehavior: "when_no_templates"
+                type: "aws"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /players/{playerId}:
+            get:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${PlayerGetFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            put:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${PlayerPutFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /players/{playerId}/games:
+            get:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${MyGamesListFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /players/{playerId}/games/{gameId}:
+            get:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GameGetFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            put:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${GameListOnMarketPlaceFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              - name: "gameId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS,PUT'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /players/{playerId}/progress:
+            get:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${PlayerProgressGetFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+          /players/{playerId}/wallet:
+            get:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${PlayerWalletGetFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            post:
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              security:
+              - authorizer: []
+              x-amazon-apigateway-integration:
+                httpMethod: "POST"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${PlayerWalletAddFunction}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+            options:
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              parameters:
+              - name: "playerId"
+                in: "path"
+                required: true
+                type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Empty"
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Headers:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                requestTemplates:
+                  application/json: "{\"statusCode\": 200}"
+                passthroughBehavior: "when_no_match"
+                type: "mock"
+        securityDefinitions:
+          authorizer:
+            type: "apiKey"
+            name: "Authorization"
+            in: "header"
+            x-amazon-apigateway-authtype: "custom"
+            x-amazon-apigateway-authorizer:
+              authorizerUri: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${stageVariables.authorizerfunction}/invocations"
+              authorizerResultTtlInSeconds: 3600
+              identitySource: "method.request.header.Authorization"
+              type: "request"
+        definitions:
+          Empty:
+            type: "object"
+            title: "Empty Schema"      
+
+  RESTActiveGamesListPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ActiveGamesListFunction
+      Principal: apigateway.amazonaws.com            
+  
+  RESTGameActivatePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GameActivateFunction
+      Principal: apigateway.amazonaws.com            
+  
+  RESTGameHeaderPutPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GameHeaderPutFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTGameAnswerPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GameAnswerFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTLeaderboardGetPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LeaderboardGetFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTGamePlayPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GamePlayFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTMarketplaceGetPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref MarketplaceGetFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTPlayerGetPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PlayerGetFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTPlayerPutPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PlayerPutFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTMyGamesListPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref MyGamesListFunction
+      Principal: apigateway.amazonaws.com            
+      
+  RESTGetGamePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GameGetFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTGameListOnMarketplacePermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GameListOnMarketPlaceFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTPlayerProgressPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PlayerProgressGetFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTPlayerWalletPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PlayerWalletGetFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTPlayerWalletAddPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PlayerWalletAddFunction
+      Principal: apigateway.amazonaws.com            
+
+  RESTAuthorizerPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn:
+    - STSRESTAPI
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref Authorizer
+      Principal: apigateway.amazonaws.com            
+
+  PurchaseGameStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: game_purchase_statemachine/game_purchase.asl.json
+      DefinitionSubstitutions:
+        PlayerWalletTable: !ImportValue STS-PlayerWalletTable
+        PlayerInventoryTable: !ImportValue STS-PlayerInventoryTable
+        MarketplaceTable: !ImportValue STS-MarketplaceTable
+        PlayerWalletTopicArn: !ImportValue STS-PlayerWalletTopicArn
+        PurchaseSourceStreamName: !ImportValue STS-PurchaseSourceStreamName
+      Type: EXPRESS
+      Tracing:
+        Enabled: True
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+             LogGroupArn: !GetAtt MarketplacePurchaseLogGroup.Arn
+        IncludeExecutionData: true
+        Level: ALL
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !ImportValue STS-PlayerWalletTable
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue STS-PlayerInventoryTable
+        - DynamoDBCrudPolicy:
+            TableName: !ImportValue STS-MarketplaceTable
+        - SNSPublishMessagePolicy:
+            TopicName: !ImportValue STS-PlayerWalletTopicName
+        - KinesisCrudPolicy:
+            StreamName: !ImportValue STS-PurchaseSourceStreamName
+        - CloudWatchLogsFullAccess
+
+  MarketplacePurchaseLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Sub "/sts/statemachines/purchasegame-${AWS::StackName}"
+
+  STSAPIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref STSRESTAPI
+
+  STSAPIStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !GetAtt STSAPIDeployment.DeploymentId
+      RestApiId: !Ref STSRESTAPI
+      StageName: prod
+      Description: prod
+      TracingEnabled: True
+      Variables:
+        authorizerfunction: !Ref Authorizer
+
+  AvatarBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders:
+            - "*"
+          AllowedMethods:
+            - GET
+            - PUT
+            - HEAD
+          AllowedOrigins:
+            - "*"
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+
+  NotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: functions/notification_send/
+      MemorySize: 512
+      Environment:
+        Variables:
+          REGION: !Sub "${AWS::Region}"
+      Policies:
+        - !Ref SendNotificationPolicy
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Events:
+        AvatarWorkflowCompleted:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !ImportValue STS-STSEventBusName
+            Pattern:
+              source:
+                - sts.avatar
+              detail-type:
+                - "Avatar Processing Completed"
+                - "Avatar Processing Failed"
+      Tags:
+        Dashboard: GeneralOps
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+        - app.ts
+
+  SendNotificationPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      ManagedPolicyName: !Join [ "", [!Ref "AWS::StackName", "-AvatarSendPolicy" ] ]      
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+            - Effect: "Allow"
+              Action: "iot:Publish"
+              Resource: !Join ["", ["arn:aws:iot:", !Ref AWS::Region, ":", !Ref AWS::AccountId, ":topic/notifications/*"]]
+
+  NotificationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref NotificationFunction]]
+
+  PlayerAvatarThumbnailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: Live
+      CodeUri: functions/playeravatar_thumbnail/
+      MemorySize: 1024
+      Handler: app.handler
+      Environment:
+        Variables:
+          REGION: !Sub "${AWS::Region}"
+          PLAYER_AVATAR_BUCKET: !Ref PlayerAvatarBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref AvatarBucket
+        - S3CrudPolicy:
+            BucketName: !Ref PlayerAvatarBucket
+        - CloudWatchLambdaInsightsExecutionRolePolicy
+      Tags:
+        Dashboard: GeneralOps
+
+  PlayerAvatarThumbnailLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerAvatarThumbnailFunction]]
+            
+  CognitoUpdateUserAttributesPolicy:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: !Join [ "", [!Ref "AWS::StackName", "-CognitoUpdateUserAttributesPolicy" ] ]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - cognito-idp:AdminUpdateUserAttributes
+            Resource: !ImportValue STS-UserPoolArn
+      Roles:
+        - !Ref PlayerAvatarStateMachineRole
+  
+  PlayerAvatarStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: player_avatar_statemachine/player_avatar.asl.json
+      DefinitionSubstitutions:
+        ThumbnailFunction: !Ref PlayerAvatarThumbnailFunction
+        DistributionUrl: !GetAtt PlayerAvatarDistribution.DomainName
+        PlayerTable: !ImportValue STS-PlayerTable
+        CognitoUserPoolId: !ImportValue STS-UserPoolId
+        EventBusName: !ImportValue STS-STSEventBusName
+        EventSource: sts.avatar
+      Type: EXPRESS
+      Tracing:
+        Enabled: True
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+             LogGroupArn: !GetAtt PlayerAvatarLogGroup.Arn
+        IncludeExecutionData: true
+        Level: ALL
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref PlayerAvatarThumbnailFunction
+        - EventBridgePutEventsPolicy:
+            EventBusName: !ImportValue STS-STSEventBusName
+        - DynamoDBWritePolicy:
+            TableName: !ImportValue STS-PlayerTable
+        - S3CrudPolicy:
+            BucketName: !Ref AvatarBucket
+        - S3CrudPolicy:
+            BucketName: !Ref PlayerAvatarBucket
+        - RekognitionLabelsPolicy: {}
+        - CloudWatchLogsFullAccess
+      Events:
+        AvatarUploadedEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - aws.s3
+              detail-type:
+                - 'Object Created'
+              resources:
+                - !GetAtt AvatarBucket.Arn
+            InputPath: '$.detail'
+
+  PlayerAvatarLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: !Sub "${LogRetentionDays}"
+      LogGroupName: !Sub "/sts/statemachines/playeravatar-${AWS::StackName}"
+
+  PlayerAvatarBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders:
+            - "*"
+          AllowedMethods:
+            - GET
+            - PUT
+            - HEAD
+          AllowedOrigins:
+            - "*"
+          
+  PlayerAvatarCloudfrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties: 
+      CloudFrontOriginAccessIdentityConfig: 
+        Comment: !Sub 'Origin Access Identity ${AWS::StackName} for player avatars'
+        
+  PlayerAvatarDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties: 
+      DistributionConfig:
+        Origins: 
+          - DomainName: !Join [ "", [ !Ref PlayerAvatarBucket, ".s3.", !Ref "AWS::Region", ".amazonaws.com"]]
+            Id: 'S3PlayerAvatarOrigin'
+            S3OriginConfig:
+              OriginAccessIdentity: !Join [ "", [ "origin-access-identity/cloudfront/", !Ref PlayerAvatarCloudfrontOAI]]
+            ConnectionAttempts: 3
+            ConnectionTimeout: 10
+        Comment: 'SimpletriviaService: CloudFront Distribution for player avatars'
+        DefaultCacheBehavior: 
+          CachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad'
+          TargetOriginId: 'S3PlayerAvatarOrigin'
+          ViewerProtocolPolicy: https-only
+        Enabled: true
+        IPV6Enabled: true
+        ViewerCertificate: 
+          CloudFrontDefaultCertificate: true
+
+  PlayerAvatarBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref PlayerAvatarBucket
+      PolicyDocument:
+        Version: 2008-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+            Principal:
+              CanonicalUser: !GetAtt PlayerAvatarCloudfrontOAI.S3CanonicalUserId
+            Resource: !Join ["", ["arn:aws:s3:::", !Ref PlayerAvatarBucket, "/*"]]
+
+Outputs:
+  RESTAPIGWID:
+    Description: "ID of the HTTP API"
+    Value: !Ref STSRESTAPI
+
+  RESTApiGWURI:
+    Description: "URI for the HTTP API"
+    Value: !Sub https://${STSRESTAPI}.execute-api.${AWS::Region}.amazonaws.com/prod/
+    Export:
+      Name: "STS-APIGWURI"

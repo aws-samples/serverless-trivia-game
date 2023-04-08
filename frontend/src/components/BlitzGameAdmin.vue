@@ -23,7 +23,7 @@
             </v-toolbar>
             <v-row><v-col cols="4"><pre class="headline"># of Questions:</pre></v-col><v-col><pre class="headline">{{numberOfQuestions}}</pre></v-col></v-row>            
             <v-row><v-col cols="4"><pre class="headline"># of Players:</pre></v-col><v-col><pre class="headline">{{numberOfPlayers}}</pre></v-col></v-row>            
-            <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="startGame">Start Game</v-btn>
+            <v-btn x-large block color=button-main class="white--text" v-on:click="startGame">Start Game</v-btn>
             <v-row class="mb-6"></v-row>
         </span>
         <span v-if="mode==='game'">
@@ -42,7 +42,8 @@
                 <span v-if="hasfollowup"><v-row><v-col cols="4"><pre class="headline">Followup:</pre></v-col><v-col><pre class="headline">{{question.followup}}</pre></v-col></v-row></span>
                 <v-row><v-col cols="4"><pre class="headline">Responses:</pre></v-col><v-col><pre class="headline">{{responses}}</pre></v-col></v-row>
             </span>
-<!--             <v-data-table
+<!-- Removed until out of Vuetify Labs
+            <v-data-table
             :headers="scoreboardheaders"
             :items="liveScoreboard"
             dense
@@ -54,7 +55,8 @@
                         <td>{{props.item.score}}</td>
                     </tr>
                 </template>
-            </v-data-table> -->
+            </v-data-table>
+-->
             <v-row>
                 <v-col cols="3"></v-col><v-col cols="6">
                     <v-table>
@@ -81,13 +83,13 @@
                 </v-col>
             </v-row>
             <v-row class="mb-1" v-if="questionsRemaining"> 
-                <v-btn x-large block color="#00FFFF" class="white--text" v-on:click='askQuestion'>Ask Question</v-btn>
+                <v-btn x-large block color=button-main class="white--text" v-on:click='askQuestion'>Ask Question</v-btn>
             </v-row>
             <v-row class="mb-1" v-if="!questionsRemaining && !gameOver"> 
-                <v-btn x-large block color="#00FFFF" class="white--text" v-on:click='sendGameOver'>Game Over</v-btn>
+                <v-btn x-large block color=button-main class="white--text" v-on:click='sendGameOver'>Game Over</v-btn>
             </v-row>
             <v-row class="mb-1" v-if="gameOver"> 
-                <v-btn x-large block color="#00FFFF" class="white--text" v-on:click='endGame'>End Game</v-btn>
+                <v-btn x-large block color=button-main class="white--text" v-on:click='endGame'>End Game</v-btn>
             </v-row>
             <v-row class="mb-6"></v-row>
         </span>
@@ -98,10 +100,10 @@
 
 <script>
 import { defineComponent } from 'vue'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
-    name: 'BlitzGameAdmin',
+    name: 'blitz-game-admin',
 
     computed: {
         username: function() { 
@@ -218,12 +220,14 @@ export default defineComponent({
             this.$emit('send-iot-message', `games/${this.liveAdminGameKey}/endthegame`, JSON.stringify(message));
             gameStore.admin.hostgames.mode = 'getlist'
             gameStore.live.admin.blitz = false
+            gameStore.live.blitz.playerCount = 0;
             gameStore.live.blitz.responses = 0
             gameStore.live.blitz.correct = 0
             gameStore.live.scoreboard = []
             gameStore.uimode = ''
             this.mode = 'lobby';
             gameStore.live.blitz.gameOver = false
+            gameStore.uimode = 'home'
         },
         startGame() {
             const gameStore = useGameStore()
@@ -234,9 +238,9 @@ export default defineComponent({
         },
         sendGameOver() {
             const gameStore = useGameStore()
+            gameStore.live.blitz.gameOver = true
             let message = { playerName: this.username, gameId: this.gameId };
             this.$emit('send-iot-message', `games/${this.liveAdminGameKey}/gameover`, JSON.stringify(message));
-            gameStore.live.blitz.gameOver = true
         }
     }
 })

@@ -29,10 +29,10 @@ import Hostgame from './Hostgame.vue'
 import Managequiz from './Managequiz.vue'
 import LiveGameAdminController from './LiveGameAdminController.vue'
 import BlitzGameAdmin from './BlitzGameAdmin.vue'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent ({
-    name: 'AdminController',
+    name: 'admin-controller',
     components: {
         Hostgame,
         Managequiz,

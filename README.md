@@ -19,20 +19,44 @@ Important: this application uses various AWS services and there are costs associ
 ├── frontend                    <-- Source code for the Vue.js frontend
 ```
 
+## Release Notes
+
+### Backend
+1. The backend of Simple Trivia Service uses TypeScript/Node 18.x and the AWS SDK v2. This is the start of the full conversion to TypeScript. Not everything uses strong types in Simple Trivia Service today. There are some updates that are being looked at, including GameSparks and Step Functions, and some DynamoDB table optimizations, These changes will have impact on the types that are used. Types are planned to be added with these updates.
+2. The bakcend is now set up in multiple, separate templates and are no longer nested. This enables faster innovation for developers looking to quickly expirement with the solution.
+3. The Game Detail table has been retired and questions are now stored in the Player Inventory table.
+4. WebPush backend has been removed and notifications now use an IoT topic for the individual player.
+
+### Front End
+1. The front end has been updated to use Vue3/Vuetify3 and Node 18.x.
+
+
+### Roadmap
+The following items are on the roadmap to be introduced in future versions. If you are interested, please contact @timbrucemi on Twitter.
+
+1. Versus mode - will use GameLift FlexMatch stand-alone matchmaking to to introduce a player vs. player timed mode.
+2. Investigating updates and alternatives for backend services to manage game state while still remaining serverless. This will focus on single player, multiplayer websockets, and multiplayer IoT.
+3. Additions of strong types for functions using `any` data types.
+4. Automated localization of player generated content/chat. Stretch goal will include localization of front end.
+
 ## Requirements
 
 1. An [AWS Account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html)
-2. [AWS CLI v1.19.112 installed](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) and [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) with Admin privileges
-3. [AWS SAM CLI v1.33 installed](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
-4. [AWS CDK v1.57.0 installed](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html#getting_started_install)
-5. [NodeJS v16.14.x or higher installed](https://nodejs.org/en/download/package-manager/)
-6. [Vue.js (v.3) and Vue CLI (v. 5) installed](https://blog.vuejs.org/posts/vue-3-as-the-new-default.html)
-7. [Create an IoT Endpoint in your account](https://docs.aws.amazon.com/iot/latest/developerguide/setting-up.html#iot-console-signin)
-8. Optional [AWS Amplify installed and configured to access the account you are using](https://docs.amplify.aws/cli/start/install)
+2. [AWS CLI v.2.7.21 installed](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) and [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) with Admin privileges
+3. [AWS SAM CLI v1.78 installed](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
+4. [NodeJS v18.x installed](https://nodejs.org/en/download/package-manager/)
+5. [Vue.js and Vue CLI (v. 5.0.8) installed](https://vuejs.org/guide/quick-start.html)
+6. [Create an IoT Endpoint in your account](https://docs.aws.amazon.com/iot/latest/developerguide/setting-up.html#iot-console-signin)
+7. [jq is installed](https://stedolan.github.io/jq/download/)
+7. Optional [AWS Amplify installed and configured to access the account you are using](https://docs.amplify.aws/cli/start/install)
 
 ## Installation Instructions
 
-The installation instructions are broken down into two parts, starting with the backend and concluding with the frontend.
+The installation instructions are broken down into two parts
+    1. Simple Trivia Service backend deployment
+    2. Simple Trivia Service frontend deployment
+
+There are a number of steps in each part, which are described below.
 
 ### Backend Setup
 
@@ -40,50 +64,100 @@ This set of steps will deploy a number of AWS resources to your account, includi
 
 1. Create an [AWS Account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html) if you do not already have one.
 2. Clone this repo using `git clone`.
-3. Use the command `aws iot describe-endpoint --endpoint-type iot:Data-ATS --region <your_region>` to obtain the IoT endpoint.  Copy this value down, as it is also required for the backend and user interface.
-4. Navigate to the serverless-trivia-game directory and run the command `./prebuild.sh`.  This script will build 2 layers, which are required for the project, as well as installing Node.JS dependencies.  When the script is finished, you should be in the directory serverless-trivia-game.
-5. Navigate to the serverless-trivia-game/backend directory.
-6. Run the command `sam build --use-container` to package the application. This is used to compile your functions in a Docker container that behaves like a Lambda environment, so they're in the right format when you deploy them to the AWS Cloud.
-7. Run the command `sam deploy --guided --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND` to start the deployment of the application.  The following options are presented during this step:
-```
-    Stack name: sts
-    Region: <your selected region>
-    IoTEndpoint: <your IoTEndpoint from step 3>
-    LogRetentionDays: 14
-    ResourceGroupPrefix: GameService
-    EMFNamespace: STS
-    S3BufferInterval: 60
-    S3BufferSize: 5
-    SourceStreamSize: 1
-    Confirm changes before deploy: N
-    Allow SAM CLI IAM role creation: Y
-    Save arguments to configuration file: Y
-    SAM configuration file: samconfig.toml
-```
-> **Note:** The project requires `CAPABILITY_NAMED_IAM` and `CAPABILITY_AUTO_EXPAND.`  AUTO_EXPAND is required to support SAM Nested Templates, which this project includes.
-8. Copy the outputs from the `sam deploy` command.  You will need these to setup Simple Trivia Service's user interface.
-> **Note:** The token for CloudFormation may timeout. If it does, navigate to the [AWS CloudFormation](https://console.aws.amazon.com/cloudformation/home) page, find the `sts` stack and click on the `Outputs` tab to get these values. 
-
+3. Navigate to the `backend/Step1` directory. This template deploys DynamoDB Tables for Simple Trivia Service. Run the following commands:
+    a. `sam deploy --stack-name sts-dt --guided` providing the following responses:
+        1. Stack Name: `sts-dt`
+        2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+        3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+        4. Parameter ResourceGroupPrefix: `GameService-DB`
+        6. Confirm changes before deploy: `N`
+        7. Allow SAM CLI IAM role creation: `Y`
+        8. Disable rollback: `N`
+        9. Save arguments to configuration file: `Y`
+        10. SAM configuration file: `samconfig.toml`
+        11. AM configuration environment: `default`
+4. Navigate to the `backend/Step2` directory. This template deploys some of the core utilities needed for Simple Trivia Service. Run the following commands:
+    a. `sam build -u -p -t template.yaml`
+    b. `sam deploy --stack-name sts --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+        1. Stack Name: `sts`
+        2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+        3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+        4. Parameter ResourceGroupPrefix: `GameService`
+        5. Parameter EMFNamespace: `STS`
+        6. Confirm changes before deploy: `N`
+        7. Allow SAM CLI IAM role creation: `Y`
+        8. Disable rollback: `N`
+        9. Save arguments to configuration file: `Y`
+        10. SAM configuration file: `samconfig.toml`
+        11. AM configuration environment: `default`
+5. Navigate to the `backend/Step3` directory. This template deploys the analytics pipeline for Simple Trivia Service. Run the following commands:
+    a. `sam build -u -p -t template.yaml`
+    b. `sam deploy --stack-name sts-analytics --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+        1. Stack Name: `sts-analytics`
+        2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+        3. Parameter ResourceGroupPrefix: `GameService`
+        4. Parameter ServicePrefix: `sts-analytics`
+        5. Parameter S3BufferInterval: `60`
+        6. Parameter S3BufferSize: `5`
+        7. Parameter SourceStreamSize: `1`
+        8. Confirm changes before deploy: `N`
+        9. Allow SAM CLI IAM role creation: `Y`
+        10. Disable rollback: `N`
+        11. Save arguments to configuration file: `Y`
+        12. SAM configuration file: `samconfig.toml`
+        13. AM configuration environment: `default`
+7. Navigate to the `backend/Step4` directory. This template deploys the RESTful interface for Simple Trivia Service. Run the following commands:
+    a. `sam build -u -p -t template.yaml`
+    b. `sam deploy --stack-name sts-rest --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+        1. Stack Name: `sts-rest`
+        2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+        3. Parameter EMFNamespace: `STS`
+        4. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+        5. Parameter ResourceGroupPrefix: `GameService`
+        6. Confirm changes before deploy: `N`
+        7. Allow SAM CLI IAM role creation: `Y`
+        8. Disable rollback: `N`
+        9. Save arguments to configuration file: `Y`
+        10. SAM configuration file: `samconfig.toml`
+        11. AM configuration environment: `default`
+8. Navigate to the `backend/Step5` directory. This template deploys the API Gateway WebSockets solution for Simple Trivia Service. Run the following commands:
+    a. `sam build -u -p -t template.yaml`
+    b. `sam deploy --stack-name sts-ws --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+        1. Stack Name: `sts`
+        2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+        3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+        4. Parameter ResourceGroupPrefix: `GameService`
+        5. Parameter EMFNamespace: `STS`
+        6. Confirm changes before deploy: `N`
+        7. Allow SAM CLI IAM role creation: `Y`
+        8. Disable rollback: `N`
+        9. Save arguments to configuration file: `Y`
+        10. SAM configuration file: `samconfig.toml`
+        11. AM configuration environment: `default`
+8. Navigate to the `backend/Step6` directory. This template deploys the IoT WebSockets over MQTT solution for Simple Trivia Service. Run the following commands:
+    a. `sam build -u -p -t template.yaml`
+    b. `sam deploy --stack-name sts-iot --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+        1. Stack Name: `sts-iot`
+        2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+        3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+        5. Parameter EMFNamespace: `STS`
+        6. Confirm changes before deploy: `N`
+        7. Allow SAM CLI IAM role creation: `Y`
+        8. Disable rollback: `N`
+        9. Save arguments to configuration file: `Y`
+        10. SAM configuration file: `samconfig.toml`
+        11. AM configuration environment: `default`
+    Note: This stack may cause your security token to timeout. If so, you can track progress in the CloudFormation console.
+9. Navigate to the `backend/Step7` directory. Run the script `generateAWSConfig.sh` to generate the AWSConfig.js file that you will need for the front end.
+10. Copy the `AWSConfig.js` file you just created to `frontend/src/services/AWSConfig.js`.
 
 ### Frontend Setup
 
-#### Note about the front end: There are many changes that needed to occur for security patching, including an upgrade to Vue3 and the use of Vuetify 3 Beta. As such, some features may appear different than in the prior release. As Vuetify continues their release, this repo will be updated to bring the UI in line with the prior version.
-
 These steps will configure the Qwizardly UI to utilize the features deployed during the Backend Setup.
-
-1. Navigate to the serverless-trivia-game/frontend directory.
-2. Run the command `npm install` to install dependencies.
-3. Edit the file src/services/AWSConfig.js.  Add the values for your endpoints and region that you copied from the backend setup and save the file.
-![Image of AWSConfig.js file](images/awsconfig.png)
-> **Note:** These values are from steps 3 and 8 in the Backend Setup section.
-4. Run the command `npm run dev` to run the webapp locally.
-> **Note:** The avatar notification relies on service workers that are activated only in production build. To run this locally use the following steps instead of 4. This functionality is not in the current build and will be enabled in a future build.
->   1. Run the command `npm install -g serve`
->   2. Run the command `npm run build` to create a production build for the frontend in the dist/ folder
->   3. Run the command `serve -s -p 8080 dist/` to run the webapp locally on port 8080
+1. Navigate to the `serverless-trivia-game/frontend` directory.
+2. Run the command `npm i` to install dependencies.
+4. Run the command `npm run serve` to run the webapp locally.
 5. Once the app is running, navigate to http://localhost:8080 to use the Simple Trivia Service frontend.
-
-### Note: Amplify Hosting has not been fully tested with this build and will be validated. These steps should continue to work but your mileage may vary.
 
 ### Optional: Host the Simple Trivia Service frontend using Amplify
 
@@ -125,7 +199,14 @@ Remove the stack using the following commmands:
 1. Type the command `amplify delete` from the serverless-trivia-game/frontend directory.
 
 ### Delete the Backend Services
-1. Type the command `aws cloudformation delete-stack --stack-name sts`
+1. Type the command `aws cloudformation delete-stack --stack-name sts-iot`
+2. Type the command `aws cloudformation delete-stack --stack-name sts-ws`
+3. Type the command `aws cloudformation delete-stack --stack-name sts-rest`
+4. Type the command `aws cloudformation delete-stack --stack-name sts-analytics`
+5. Type the command `aws cloudformation delete-stack --stack-name sts`
+6. Type the command `aws cloudformation delete-stack --stack-name sts-dt`
+
+Some of the stacks, namely sts-rest and sts-analtyics, contain S3 buckets that will not be deleted if they contain data. If this occurs to you, navigate to the CloudFormation console and find the stacks. Select the resources tab and carefully empty the buckets that remain as resources in the stack before trying to delete the stack again.
 
 Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 

@@ -74,9 +74,9 @@
                         <tbody>
                             <tr v-if="noquestions"><td><b>No questions in game</b></td></tr>
                             <tr
-                                v-for="question in questions"
+                                v-for="(question, index) in questions"
                                 :key="question.questionNumber"
-                                @click="editQuestion(question)"
+                                @click="editQuestion(question, index)"
                             >
                                 <td align="left">{{ question.questionNumber }}</td>
                                 <td align="left">{{ question.question }}</td>
@@ -132,23 +132,24 @@
                         <v-text-field label="Answer Followup" v-model="answerFollowup" placeholder="Extra text to follow up on answer"/>
                     </v-row>
                 </span>
-            <v-row class="mb-6"><v-btn x-large block color="#00FFFF" class="white--text" v-on:click="saveQuestion">Save Question</v-btn></v-row>
-            <v-row class="mb-6"><v-btn x-large block color="#00FFFF" class="white--text" v-on:click="cancel">Cancel</v-btn></v-row>
+            <v-row class="mb-6"><v-btn x-large block color=button-main class="white--text" v-on:click="saveQuestion">Save Question</v-btn></v-row>
+            <v-row class="mb-6"><v-btn x-large block color=button-main class="white--text" v-on:click="cancel">Cancel</v-btn></v-row>
             </v-card>
             </span>
             <span v-if="!showquestion">
-                <v-row class="mb-6"><v-btn x-large block color="#00FFFF" class="white--text" v-on:click="addQuestion">Add Question</v-btn></v-row>
-                <v-row class="mb-6"><v-btn x-large block color="#00FFFF" class="white--text" v-on:click="closequiz">Close Quiz</v-btn></v-row>
+                <v-row class="mb-6"><v-btn x-large block color=button-main class="white--text" v-on:click="addQuestion">Add Question</v-btn></v-row>
+                <v-row class="mb-6"><v-btn x-large block color=button-main class="white--text" v-on:click="saveUpdates">Save Updates</v-btn></v-row>
+                <v-row class="mb-6"><v-btn x-large block color=button-main class="white--text" v-on:click="closequiz">Close Quiz</v-btn></v-row>
             </span>
         </span>
     </div>
 </template>
 
 <script>
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default {
-    name: 'QuizList',
+    name: 'quiz-edit',
     data: function() { return {
         questionheaders: [{ text: '#', align:'left', sortable:'false', value:'questionNumber'},
                     { text: 'Question', value: 'question'}],
@@ -170,11 +171,11 @@ export default {
         answerFollowup:'',
         answers: ['A', 'B', 'C', 'D'],
         groups: [1,2,3,4,5,6,7,8,9,10],
-
+        index: -1
     }},
-    emits:['save-question'],
+    emits:['save-updates'],
     methods: {
-        async editQuestion(question) {
+        async editQuestion(question, index) {
             this.questionNumber = question.questionNumber
             this.questionIndex = this.questionNumber -1
             this.showquestion=true
@@ -187,6 +188,7 @@ export default {
             this.alternatives=this.questions[this.questionIndex].alternatives
             this.questionGroup=this.questions[this.questionIndex].questionGroup
             this.answerFollowup=this.questions[this.questionIndex].answerFollowup
+            this.index = index
         },
         closequiz() {
             const gameStore = useGameStore()
@@ -206,6 +208,7 @@ export default {
             this.alternatives=[]
             this.answerFollowup=''
             this.questionGroup=this.lastgroup
+            this.index = this.totalquestions + 1
         },
         cancel() {
             this.questionNumber = -1
@@ -250,24 +253,21 @@ export default {
                 this.errortext = 'Multiple Choice Question must have at least A and B answers'
             } 
             if(this.errortext === '') {
-                let data = {gameId: this.game.gameId, quizname: this.game.quizName, question: this.questionText,
-                    quizMode: this.game.quizMode, questionNumber: this.questionNumber, questionType: this.game.questionType,
+                let data = {question: this.questionText, questionNumber: this.questionNumber,
                     answerA: this.answerA, answerB: this.answerB, answerC: this.answerC, answerD: this.answerD,
                     correctAnswer: this.correctAnswer, questionGroup: this.questionGroup, alternatives: this.alternatives,
-                    answerFollowup: this.answerFollowup, owner: this.game.owner}
-                const index = parseInt(data.questionNumber) - 1;
-                let replace = 0;
-                if(index<gameStore.admin.game.questions.length){
-                    replace = 1;
-                }
-                gameStore.admin.game.questions.splice(index,replace,data)
-                this.$emit("save-question", this.game.gameId, this.questionNumber, this.game.quizMode, this.game.questionType, this.questionText, this.answerA, this.answerB, this.answerC, this.answerD, this.correctAnswer, this.questionGroup, this.alternatives, this.answerFollowup)
+                    answerFollowup: this.answerFollowup}
+                gameStore.admin.game.questions.splice(this.index,1,data)
                 this.showquestion=false
                 this.questionNumber= -1
                 this.questionIndex = -1
+                this.index = -1
             } else {
                 this.error = true
             }
+        },
+        async saveUpdates() {
+            this.$emit("save-updates")
         }
 
     },

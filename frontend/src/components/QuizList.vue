@@ -104,16 +104,16 @@
             <v-row>
                 <v-col cols="3"></v-col><v-col cols="6">
                     <v-row class="mb-6">
-                        <v-btn x-large block color="#33FFFF" class="white--text" v-on:click="createNew">Create New</v-btn>
+                        <v-btn x-large block color=button-main class="white--text" v-on:click="createNew">Create New</v-btn>
                     </v-row><v-row class="mb-3"></v-row>
                     <v-row class="mb-6">
-                        <v-btn x-large block color="#33FFFF" class="white--text" v-on:click="editGame">Edit Quiz</v-btn>
+                        <v-btn x-large block color=button-main class="white--text" v-on:click="editGame">Edit Quiz</v-btn>
                     </v-row><v-row class="mb-3"></v-row>
                     <v-row class="mb-6">
-                        <v-btn x-large block color="#33FFFF" class="white--text" v-on:click="sellGame">Sell Quiz</v-btn>
+                        <v-btn x-large block color=button-main class="white--text" v-on:click="sellGame">Sell Quiz</v-btn>
                     </v-row><v-row class="mb-3"></v-row>
                     <v-row class="mb-6">
-                        <v-btn x-large block color="#33FFFF" class="white--text" v-on:click="closeList">Home</v-btn>
+                        <v-btn x-large block color=button-main class="white--text" v-on:click="closeList">Home</v-btn>
                     </v-row>
                 </v-col>
             </v-row>
@@ -124,10 +124,10 @@
 <script>
 import { defineComponent } from 'vue'
 import { DataService } from '@/services/DataServices.js'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
-    name: 'QuizList',
+    name: 'quiz-list',
     data: function() { return {
         quizName: '',
         quizCode: '',

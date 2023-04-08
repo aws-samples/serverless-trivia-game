@@ -14,13 +14,12 @@
 */
 
 <template>
-    <v-container v-if="quizname!=''">
-        <v-row class="mb-3">
-            <v-toolbar align="center" color="primary" class="headline black--text">
-                <v-spacer></v-spacer>
-                <v-toolbar-title>Scoreboard for Quiz: {{quizname}}</v-toolbar-title>
-            </v-toolbar>
-        </v-row>
+    <div v-if="quizname!=''">
+        <v-toolbar color="primary" class="headline black--text">
+            <v-spacer></v-spacer>
+            <v-toolbar-title>Scoreboard for Quiz: {{quizname}}</v-toolbar-title>
+            <v-spacer></v-spacer>
+        </v-toolbar>
         <v-row align="center" justify="center" class="mb-6">
 <!--             <v-data-table
                 :headers="headers"
@@ -41,6 +40,7 @@
             <v-table>
                 <thead>
                     <tr>
+                        <th></th>
                         <th class="text-left">
                             Position
                         </th>
@@ -57,6 +57,12 @@
                         v-for="player in scoreboard"
                         :key="player.Position"
                     >
+                        <td>
+                            <v-avatar color="accent" size="24" class="mr-2">
+                                <v-img v-if="checkFile(player.playerAvatar)" :src="player.playerAvatar"/>
+                                <v-icon v-else>mdi-account-circle</v-icon>
+                            </v-avatar>
+                        </td>
                         <td>{{ player.Position }}</td>
                         <td>{{ player.playerName }}</td>
                         <td>{{ player.Score }}</td>
@@ -67,9 +73,10 @@
         </v-row>
         <v-row class="mb-6"></v-row>
         <v-row class="mb-6">
-            <v-btn x-large block color='#00FFFF' class="white--text" v-on:click='$emit("close-me")'>Close</v-btn>
+            <v-btn x-large block color=button-main class="white--text" v-on:click='$emit("close-me")'>Close</v-btn>
         </v-row>
-    </v-container>
+
+    </div>
 <!--     <v-container v-else>
         <v-toolbar color="primary" class="headline black--text">
             <v-spacer></v-spacer>
@@ -118,11 +125,11 @@
 <script>
 import { defineComponent } from 'vue'
 import { DataService } from '@/services/DataServices.js'
-import { axios } from 'axios'
-import { useGameStore } from '@/stores/game.js'
+import axios from 'axios'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
-    name: 'Scoreboard',
+    name: 'scoreboard-listing',
 
     data: function() {return {
         rows: [5,11,11],
@@ -157,22 +164,24 @@ export default defineComponent({
         async getscoreboard(game) {
             const gameStore = useGameStore()
             let data = {gameId: game.gameId, quizName: game.quizName, playerName: this.username, jwt: this.myjwt};
-            let results = await DataService.getScoreboard(data);
+            let results = await DataService.getScoreboardWithPlayer(data);
             gameStore.game.quizName = game.quizName
             gameStore.scoreboard.players = results.data
             gameStore.gamemode = 'scoreboard'
         }, 
         async checkFile(file) {
-            axios.get(file)
-                .then(function (response) {
-                    // handle success
-                    console.log('got the file');
-                    console.log(`${JSON.stringify(response)}`);
-                    return true;})
-                .catch(function (error) {
-                    // handle error
-                    console.log(`${JSON.stringify(error)}`);
-                    return false;});
+            console.log(file)
+            try {
+                let response = await axios.get(file)
+                if (response.status===403) { 
+                    return false;
+                } else {
+                    return true;
+                }
+            } catch(e) {
+                //axios get error, suppress avatar
+                return false
+            }
         }
         
     }

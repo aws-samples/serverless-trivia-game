@@ -54,54 +54,55 @@
                     </v-data-table>
                 </v-row>
             </v-card> -->
-            <v-row class="mb-6">
-                <v-col cols="3"></v-col><v-col cols="6">
-                    <v-row>
-                    <v-table>
-                        <thead>
-                            <tr>
-                                <th>
+            <v-card>
+                <v-row class="mb-6" align="center">
+                    <v-col cols="3"></v-col><v-col cols="6">
+                        <v-row align="center">
+                        <v-table>
+                            <thead>
+                                <tr>
+                                    <th>
 
-                                </th>
-                                <th class="text-left">
-                                    Quiz Name
-                                </th>
-                                <th class="text-left">
-                                    Quiz Mode
-                                </th>
-                                <th class="text-left">
-                                    Question Type
-                                </th>
-                                <th class="text-left">
-                                    Seller
-                                </th>
-                                <th class="text-left">
-                                    Amount
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="game in marketplaceListings"
-                                :key="game.gameId"
-                            >
-                                <td><input type="radio" :value="game.gameId" v-model="pickedGameId"></td>
-                                <td>{{ game.quizName }}</td>
-                                <td>{{ game.quizMode }}</td>
-                                <td>{{ game.questionType }}</td>
-                                <td>{{ game.playerName }}</td>
-                                <td>{{ game.amount }}</td>
-                            </tr>
-                        </tbody>
-                    </v-table></v-row>
-                </v-col>
-            </v-row>
-
+                                    </th>
+                                    <th class="text-left">
+                                        Quiz Name
+                                    </th>
+                                    <th class="text-left">
+                                        Quiz Mode
+                                    </th>
+                                    <th class="text-left">
+                                        Question Type
+                                    </th>
+                                    <th class="text-left">
+                                        Seller
+                                    </th>
+                                    <th class="text-left">
+                                        Amount
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="game in marketplaceListings"
+                                    :key="game.gameId"
+                                >
+                                    <td><input type="radio" :value="game.gameId" v-model="pickedGameId"></td>
+                                    <td>{{ game.quizName }}</td>
+                                    <td>{{ game.quizMode }}</td>
+                                    <td>{{ game.questionType }}</td>
+                                    <td>{{ game.playerName }}</td>
+                                    <td>{{ game.amount }}</td>
+                                </tr>
+                            </tbody>
+                        </v-table></v-row>
+                    </v-col>
+                </v-row>
+            </v-card>
             <v-row class="mb-6">
-                <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="purchaseGame">Purchase Game</v-btn>
+                <v-btn x-large block color=button-main class="white--text" v-on:click="purchaseGame">Purchase Game</v-btn>
             </v-row>
             <v-row class="mb-6">
-                <v-btn x-large block color="#00FFFF" class="white--text" v-on:click="closeList">Home</v-btn>
+                <v-btn x-large block color=button-main class="white--text" v-on:click="closeList">Home</v-btn>
             </v-row>
         </span>
     </div>
@@ -110,10 +111,10 @@
 <script>
 import { defineComponent } from 'vue'
 import { DataService } from '@/services/DataServices.js'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
-    name: 'Marketplace',
+    name: 'marketplace-listing',
     props: {
         marketplaceListings: Array
     },
@@ -145,15 +146,20 @@ export default defineComponent({
                 });
                 let results = await DataService.purchaseGame({gameId: this.pickedGameId, playerId: this.username,
                     sellerPlayerId, jwt: this.myjwt})
-                console.info(`here are the results: ${JSON.stringify(results)}`)
+                console.info(`here are the results`)
+                console.info(`${JSON.stringify(results)}`)
                 let output = JSON.parse(results.data.output)
+                console.info(`${JSON.stringify(output)}`)
                 switch(output.statusCode){
                     case 500:
                         alert(output.body.message)
                         break
                     case 200:
-                        alert('Game purchased')
+                        alert(output.body.message)
                         break
+                    default:
+                        alert('An error occurred. Please check your wallet for funds.')
+                        break;
                 }
             } else {
                 alert('Please select a game first')

@@ -15,14 +15,12 @@
 
 <template>
   <div>
-    <v-container>
+    <div>
       <v-row class="mb-12"></v-row>
-      <v-row>
           <v-toolbar color="primary" class="headline black--text">
             <v-spacer></v-spacer>
               <v-toolbar-title>{{headerText}}</v-toolbar-title>
           </v-toolbar>
-      </v-row>
       <v-row v-if="gameStore.cognito.errortext!==''">
           <v-alert v-model="gameStore.cognito.error" type="error" style="error">{{ gameStore.cognito.errortext }}</v-alert>
       </v-row>
@@ -41,13 +39,13 @@
                   /></v-col>
         </v-row>
         <v-row class="mb-6"> 
-            <v-btn x-large block color="#00FFFF" v-on:click='login'>Login</v-btn>
+            <v-btn x-large block color=button-main v-on:click='login'>Login</v-btn>
         </v-row>
         <v-row class="mb-6"> 
-            <v-btn x-large block color="#99FFFF" v-on:click='setmode("register")'>Register</v-btn>
+            <v-btn x-large block color=button-main v-on:click='setmode("register")'>Register</v-btn>
         </v-row>
         <v-row class="mb-6"> 
-            <v-btn x-large block color="#99FFFF" v-on:click='setmode("forgotpassword")'>Reset Password</v-btn>
+            <v-btn x-large block color=button-main v-on:click='setmode("forgotpassword")'>Reset Password</v-btn>
         </v-row>
       </v-container>
       <div v-if="mode=='register'">
@@ -73,13 +71,13 @@
         </v-row>
         <div>
           <v-row class="mb-6"> 
-              <v-btn x-large block color="#00FFFF" v-on:click='register()'>Register</v-btn>
+              <v-btn x-large block color=button-main v-on:click='register()'>Register</v-btn>
           </v-row>
           <v-row class="mb-6"> 
-              <v-btn x-large block color="#99FFFF" v-on:click='setmode("login")'>Login</v-btn>
+              <v-btn x-large block color=button-main v-on:click='setmode("login")'>Login</v-btn>
           </v-row>
           <v-row class="mb-6"> 
-              <v-btn x-large block color="#99FFFF" v-on:click='setmode("forgotpassword")'>Reset Password</v-btn>
+              <v-btn x-large block color=button-main v-on:click='setmode("forgotpassword")'>Reset Password</v-btn>
           </v-row>
         </div>
       </div>
@@ -88,23 +86,23 @@
             <v-col><v-text-field label="Login" v-model='userName' placeholder='Login'/></v-col>
         </v-row>
         <v-row class="mb-6"> 
-            <v-btn x-large block color="#00FFFF" class="wite--text" v-on:click='forgotpassword'>Reset Password</v-btn>
+            <v-btn x-large block color=button-main class="wite--text" v-on:click='forgotpassword'>Reset Password</v-btn>
         </v-row>
         <v-row class="mb-6"> 
-            <v-btn x-large block color="#99FFFF" class="wite--text" v-on:click='setmode("login")'>Login</v-btn>
+            <v-btn x-large block color=button-main class="wite--text" v-on:click='setmode("login")'>Login</v-btn>
         </v-row>
         <v-row class="mb-6"> 
-            <v-btn x-large block color="#99FFFF" class="wite--text" v-on:click='setmode("register")'>Register</v-btn>
+            <v-btn x-large block color=button-main class="wite--text" v-on:click='setmode("register")'>Register</v-btn>
         </v-row>      
       </v-container>
-    </v-container>    
+    </div>    
   </div>
 </template>
 
 <script>
 import { defineComponent } from 'vue'
 import { AWSConfig } from '@/services/AWSConfig.js'
-import { useGameStore } from '@/stores/game.js'
+import { useGameStore } from '@/store/game.js'
 
 export default defineComponent({
 
@@ -157,7 +155,8 @@ export default defineComponent({
 
   computed:
   {
-    username: function() { return gameStore.state.user.username},
+    username: function() { const gameStore = useGameStore(); 
+      return gameStore.state.user.username},
     headerText: function() { switch(this.mode) {
         case 'login':
           return `Login`;
