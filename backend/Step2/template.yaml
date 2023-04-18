@@ -46,10 +46,13 @@ Resources:
       Environment:
         Variables:
           PLAYER_PROGRESS_TABLE_NAME: !ImportValue STS-PlayerProgressTable
+          PLAYER_PROGRESS_IDEMPOTENCY_TABLE_NAME: !Ref PlayerProgressIdempotencyTable
           REGION: !Sub "${AWS::Region}"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !ImportValue STS-PlayerProgressTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayerProgressIdempotencyTable
         - CloudWatchLambdaInsightsExecutionRolePolicy
       Events:
         SNSSendMessageEvent:
@@ -72,6 +75,20 @@ Resources:
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref PlayerProgressPutFunction]]
+
+  PlayerProgressIdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: msgId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: msgId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expiration
+        Enabled: true
+      BillingMode: PAY_PER_REQUEST
 
   ScorePutFunction:
     Type: AWS::Serverless::Function
@@ -118,10 +135,13 @@ Resources:
       Environment:
         Variables:
           PLAYER_WALLET_TABLE_NAME: !ImportValue STS-PlayerWalletTable
+          PLAYER_WALLET_IDEMPOTENCY_TABLE_NAME: !Ref MoneyAdjustIdempotencyTable
           REGION: !Sub "${AWS::Region}"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !ImportValue STS-PlayerWalletTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MoneyAdjustIdempotencyTable
         - CloudWatchLambdaInsightsExecutionRolePolicy
       Events:
         SNSSendMessageEvent:
@@ -144,6 +164,21 @@ Resources:
     Properties: 
       RetentionInDays: !Sub "${LogRetentionDays}"
       LogGroupName: !Join ["", ["/aws/lambda/", !Ref MoneyAdjustFunction]]
+
+  MoneyAdjustIdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: msgId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: msgId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expiration
+        Enabled: true
+      BillingMode: PAY_PER_REQUEST
+
 
   SendChatFunction:
     Type: AWS::Serverless::Function
