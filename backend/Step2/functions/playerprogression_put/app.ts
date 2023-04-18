@@ -19,13 +19,48 @@
 /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
 import { SNSEvent, SNSMessage } from 'aws-lambda';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 
 const playerProgressTable = process.env.PLAYER_PROGRESS_TABLE_NAME!;
+const playerProgressIdemopotencyTable = process.env.PLAYER_PROGRESS_IDEMPOTENCY_TABLE_NAME!;
 const region = process.env.REGION;
+const ttlSetting = 300000;
 
 const ddb = new DynamoDBClient({ region: region});
-const ddbDocClient = DynamoDBDocumentClient.from(ddb);
+const ddbDocClient = DynamoDBDocumentClient.from(ddb, {
+    marshallOptions: {
+        removeUndefinedValues: true
+    }
+});
+
+const clearIdempotency = async(msgId: string) => {
+  try {
+    await ddbDocClient.send(new DeleteCommand({
+        TableName: playerProgressIdemopotencyTable,
+        Key: { "msgId": msgId }
+    }));
+  } catch (error) {
+    console.error(`could not clear idempotency record on error`)
+    return;
+  }
+}
+
+const idempotencyCheck =  async(msgId: string) => {
+    const ttl: number = Math.floor(Date.now() / 1000) + ttlSetting;
+    try {
+      await ddbDocClient.send(new PutCommand({
+        TableName: playerProgressIdemopotencyTable,
+        Item: { msgId: msgId, expiration: ttl },
+        ConditionExpression: "attribute_not_exists(messageId)"
+      }))
+      return false;
+    } catch (error) {
+      if (error.name === "ConditionalCheckFailedException") {
+        return true;
+      }
+      throw error;
+    }
+}
 
 const getLevel = async(xp: number) => {
   const levels = [100, 250, 500, 800, 1100, 1500, 3000, 10000, 25000, 50000];
@@ -37,12 +72,14 @@ const getLevel = async(xp: number) => {
 }
 
 const updateXP = async(playerName: string, experience: number, wins: number) => {
-  const Key = { playerName };
   let current;
+  if(!playerName || playerName === '') {
+    return;
+  }
   try {
     current = await ddbDocClient.send(new GetCommand({
       TableName: playerProgressTable,
-      Key,
+      Key : { playerName: playerName },
     }));
     if(!current.Item) {
       // no item was retrieved - player has no current progress
@@ -59,7 +96,7 @@ const updateXP = async(playerName: string, experience: number, wins: number) => 
       const newlevel = await getLevel(newxp);
       await ddb.send(new UpdateCommand({
         TableName: playerProgressTable,
-        Key: { playerName },
+        Key: { playerName: playerName },
         ExpressionAttributeNames: { '#xp': 'experience', '#lvl': 'level', '#wins': 'wins' },
         ExpressionAttributeValues: {
           ':xp': newxp, ':lvl': newlevel, ':wins': newwins, ':curxp': current.Item.experience,
@@ -71,17 +108,21 @@ const updateXP = async(playerName: string, experience: number, wins: number) => 
     }
   } catch (e) {
     console.error(`Error setting player progress ${JSON.stringify(e.stack)}`);
-    console.error(`get${JSON.stringify(Key)}`);
     return;
   }
 }
 
 export const handler = async (event: SNSEvent) => {
   const message: SNSMessage = event.Records[0].Sns;
+  const msgId = message.MessageId;
   const msg = JSON.parse(message.Message);
-  await Promise.all([
-    updateXP(msg.playerid, msg.experience, msg.wins),
-    updateXP(msg.owner, msg.experience, 0),
-  ])
-    .catch((e) => {console.error(`Error logging ${e.stack}`)});
+  if (idempotencyCheck(msgId)) {
+    await Promise.all([
+      updateXP(msg.playerid, msg.experience, msg.wins),
+      updateXP(msg.owner, msg.experience, 0),
+    ])
+      .catch((e) => {
+        clearIdempotency(msgId);
+        console.error(`Error logging ${e.stack}`)});
+  }
 };
