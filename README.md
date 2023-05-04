@@ -21,15 +21,23 @@ Important: this application uses various AWS services and there are costs associ
 
 ## Release Notes
 
-Backend
+### Backend
 1. The backend of Simple Trivia Service uses TypeScript/Node 18.x and the AWS SDK v2. This is the start of the full conversion to TypeScript. Not everything uses strong types in Simple Trivia Service today. There are some updates that are being looked at, including GameSparks and Step Functions, and some DynamoDB table optimizations, These changes will have impact on the types that are used. Types are planned to be added with these updates.
 2. The bakcend is now set up in multiple, separate templates and are no longer nested. This enables faster innovation for developers looking to quickly expirement with the solution.
 3. The Game Detail table has been retired and questions are now stored in the Player Inventory table.
 4. WebPush backend has been removed and notifications now use an IoT topic for the individual player.
 
-Front End
+### Front End
 1. The front end has been updated to use Vue3/Vuetify3 and Node 18.x.
 
+
+### Roadmap
+The following items are on the roadmap to be introduced in future versions. If you are interested, please contact @timbrucemi on Twitter.
+
+1. Versus mode - will use GameLift FlexMatch stand-alone matchmaking to to introduce a player vs. player timed mode.
+2. Investigating updates and alternatives for backend services to manage game state while still remaining serverless. This will focus on single player, multiplayer websockets, and multiplayer IoT.
+3. Additions of strong types for functions using `any` data types.
+4. Automated localization of player generated content/chat. Stretch goal will include localization of front end.
 
 ## Requirements
 
@@ -39,6 +47,7 @@ Front End
 4. [NodeJS v18.x installed](https://nodejs.org/en/download/package-manager/)
 5. [Vue.js and Vue CLI (v. 5.0.8) installed](https://vuejs.org/guide/quick-start.html)
 6. [Create an IoT Endpoint in your account](https://docs.aws.amazon.com/iot/latest/developerguide/setting-up.html#iot-console-signin)
+7. [jq is installed](https://stedolan.github.io/jq/download/)
 7. Optional [AWS Amplify installed and configured to access the account you are using](https://docs.amplify.aws/cli/start/install)
 
 ## Installation Instructions
@@ -56,90 +65,89 @@ This set of steps will deploy a number of AWS resources to your account, includi
 1. Create an [AWS Account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html) if you do not already have one.
 2. Clone this repo using `git clone`.
 3. Navigate to the `backend/Step1` directory. This template deploys DynamoDB Tables for Simple Trivia Service. Run the following commands:
-  a. `sam deploy --stack-name sts-dt --guided` providing the following responses:
-    1. Stack Name: `sts-dt`
-    2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
-    3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
-    4. Parameter ResourceGroupPrefix: `GameService-DB`
-    6. Confirm changes before deploy: `N`
-    7. Allow SAM CLI IAM role creation: `Y`
-    8. Disable rollback: `N`
-    9. Save arguments to configuration file: `Y`
-    10. SAM configuration file: `samconfig.toml`
-    11. SAM configuration environment: `default`
+   1. `sam deploy --stack-name sts-dt --guided` providing the following responses:
+      1. Stack Name: `sts-dt`
+      2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+      3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+      4. Parameter ResourceGroupPrefix: `GameService-DB`
+      5. Confirm changes before deploy: `N`
+      6. Allow SAM CLI IAM role creation: `Y`
+      7. Disable rollback: `N`
+      8. Save arguments to configuration file: `Y`
+      9. SAM configuration file: `samconfig.toml`
+      10. SAM configuration environment: `default`
 4. Navigate to the `backend/Step2` directory. This template deploys some of the core utilities needed for Simple Trivia Service. Run the following commands:
-  a. `sam build -u -p -t template.yaml`
-  b. `sam deploy --stack-name sts --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
-    1. Stack Name: `sts`
-    2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
-    3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
-    4. Parameter ResourceGroupPrefix: `GameService`
-    5. Parameter EMFNamespace: `STS`
-    6. Confirm changes before deploy: `N`
-    7. Allow SAM CLI IAM role creation: `Y`
-    8. Disable rollback: `N`
-    9. Save arguments to configuration file: `Y`
-    10. SAM configuration file: `samconfig.toml`
-    11. SAM configuration environment: `default`
-11.AM configuration environment: `default`
+   1. `sam build -u -p -t template.yaml`
+   2. `sam deploy --stack-name sts --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+      1. Stack Name: `sts`
+      2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+      3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+      4. Parameter ResourceGroupPrefix: `GameService`
+      5. Parameter EMFNamespace: `STS`
+      6. Confirm changes before deploy: `N`
+      7. Allow SAM CLI IAM role creation: `Y`
+      8. Disable rollback: `N`
+      9. Save arguments to configuration file: `Y`
+      10. SAM configuration file: `samconfig.toml`
+      11. AM configuration environment: `default`
 5. Navigate to the `backend/Step3` directory. This template deploys the analytics pipeline for Simple Trivia Service. Run the following commands:
-  a. `sam build -u -p -t template.yaml`
-  b. `sam deploy --stack-name sts-analytics --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
-    1. Stack Name: `sts-analytics`
-    2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
-    3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
-    4. Parameter ResourceGroupPrefix: `GameService`
-    5. Parameter ServicePrefix: `sts-analytics`
-    6. Parameter S3BufferInterval: `60`
-    7. Parameter S3BufferSize: `5`
-    8. Parameter SourceStreamSize: `1`
-    9. Confirm changes before deploy: `N`
-    10. Allow SAM CLI IAM role creation: `Y`
-    11. Disable rollback: `N`
-    12. Save arguments to configuration file: `Y`
-    13. SAM configuration file: `samconfig.toml`
-    14. SAM configuration environment: `default`
-7. Navigate to the `backend/Step4` directory. This template deploys the RESTful interface for Simple Trivia Service. Run the following commands:
-  a. `sam build -u -p -t template.yaml`
-  b. `sam deploy --stack-name sts-rest --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
-    1. Stack Name: `sts-rest`
-    2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
-    3. Parameter EMFNamespace: `STS`
-    4. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
-    5. Parameter ResourceGroupPrefix: `GameService`
-    6. Confirm changes before deploy: `N`
-    7. Allow SAM CLI IAM role creation: `Y`
-    8. Disable rollback: `N`
-    9. Save arguments to configuration file: `Y`
-    10. SAM configuration file: `samconfig.toml`
-    11. SAM configuration environment: `default`
-8. Navigate to the `backend/Step5` directory. This template deploys the API Gateway WebSockets solution for Simple Trivia Service. Run the following commands:
-  a. `sam build -u -p -t template.yaml`
-  b. `sam deploy --stack-name sts-ws --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
-    1. Stack Name: `sts`
-    2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
-    3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
-    4. Parameter ResourceGroupPrefix: `GameService`
-    5. Parameter EMFNamespace: `STS`
-    6. Confirm changes before deploy: `N`
-    7. Allow SAM CLI IAM role creation: `Y`
-    8. Disable rollback: `N`
-    9. Save arguments to configuration file: `Y`
-    10. SAM configuration file: `samconfig.toml`
-    11. SAM configuration environment: `default`
+   1. `sam build -u -p -t template.yaml`
+   2. `sam deploy --stack-name sts-analytics --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+      1. Stack Name: `sts-analytics`
+      2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+      3. Parameter ResourceGroupPrefix: `GameService`
+      4. Parameter ServicePrefix: `sts-analytics`
+      5. Parameter S3BufferInterval: `60`
+      6. Parameter S3BufferSize: `5`
+      7. Parameter SourceStreamSize: `1`
+      8. Confirm changes before deploy: `N`
+      9. Allow SAM CLI IAM role creation: `Y`
+      10. Disable rollback: `N`
+      11. Save arguments to configuration file: `Y`
+      12. SAM configuration file: `samconfig.toml`
+      13. SAM configuration environment: `default`
+6. Navigate to the `backend/Step4` directory. This template deploys the RESTful interface for Simple Trivia Service. Run the following commands:
+   1. `sam build -u -p -t template.yaml`
+   2. `sam deploy --stack-name sts-rest --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+      1. Stack Name: `sts-rest`
+      2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+      3. Parameter EMFNamespace: `STS`
+      4. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+      5. Parameter ResourceGroupPrefix: `GameService`
+      6. Confirm changes before deploy: `N`
+      7. Allow SAM CLI IAM role creation: `Y`
+      8. Disable rollback: `N`
+      9. Save arguments to configuration file: `Y`
+      10. SAM configuration file: `samconfig.toml`
+      11. AM configuration environment: `default`
+7. Navigate to the `backend/Step5` directory. This template deploys the API Gateway WebSockets solution for Simple Trivia Service. Run the following commands:
+   1. `sam build -u -p -t template.yaml`
+   2. `sam deploy --stack-name sts-ws --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+      1. Stack Name: `sts`
+      2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+      3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+      4. Parameter ResourceGroupPrefix: `GameService`
+      5. Parameter EMFNamespace: `STS`
+      6. Confirm changes before deploy: `N`
+      7. Allow SAM CLI IAM role creation: `Y`
+      8. Disable rollback: `N`
+      9. Save arguments to configuration file: `Y`
+      10. SAM configuration file: `samconfig.toml`
+      11. AM configuration environment: `default`
 8. Navigate to the `backend/Step6` directory. This template deploys the IoT WebSockets over MQTT solution for Simple Trivia Service. Run the following commands:
-  a. `sam build -u -p -t template.yaml`
-  b. `sam deploy --stack-name sts-iot --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
-    1. Stack Name: `sts-iot`
-    2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
-    3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
-    4. Parameter EMFNamespace: `STS`
-    5. Confirm changes before deploy: `N`
-    6. Allow SAM CLI IAM role creation: `Y`
-    7. Disable rollback: `N`
-    8. Save arguments to configuration file: `Y`
-    9. SAM configuration file: `samconfig.toml`
-    10. SAM configuration environment: `default`
+   1. `sam build -u -p -t template.yaml`
+   2. `sam deploy --stack-name sts-iot --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --guided` providing the following responses:
+      1. Stack Name: `sts-iot`
+      2. AWS Region: `<your region to deploy to, e.g. us-east-1>`
+      3. Parameter LogRetentionDays: `7` or your value that follows [CloudWatch Log Retention Day Rules in CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays)
+      4. Parameter EMFNamespace: `STS`
+      5. Confirm changes before deploy: `N`
+      6. Allow SAM CLI IAM role creation: `Y`
+      7. Disable rollback: `N`
+      8. Save arguments to configuration file: `Y`
+      9. SAM configuration file: `samconfig.toml`
+      10. AM configuration environment: `default`
+    Note: This stack may cause your security token to timeout. If so, you can track progress in the CloudFormation console.
 9. Navigate to the `backend/Step7` directory. Run the script `generateAWSConfig.sh` to generate the AWSConfig.js file that you will need for the front end.
 10. Copy the `AWSConfig.js` file you just created to `frontend/src/services/AWSConfig.js`.
 
