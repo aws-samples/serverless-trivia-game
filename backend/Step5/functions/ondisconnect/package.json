@@ -6,7 +6,7 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.241.0",
+    "@aws-sdk/client-dynamodb": "^3.351.0",
     "@aws-sdk/lib-dynamodb": "^3.241.0",
     "esbuild": "^0.14.14"
   },
