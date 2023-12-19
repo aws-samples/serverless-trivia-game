@@ -7,7 +7,7 @@ idpool=$(aws cloudformation list-exports | jq '.Exports[] | select (.Name == "ST
 userpool=$(aws cloudformation list-exports | jq '.Exports[] | select (.Name == "STS-UserPoolId").Value' -r)
 appclient=$(aws cloudformation list-exports | jq '.Exports[] | select (.Name == "STS-AppClientId").Value' -r)
 
-file="./AWSConfig.json"
+file="./AWSConfig.js"
 rm $file
 echo "/* file generated from generateAWSConfig.sh */" >> $file
 
