@@ -6,8 +6,8 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.213.0",
-    "@aws-sdk/client-s3": "^3.213.0",
+    "@aws-sdk/client-dynamodb": "^3.351.0",
+    "@aws-sdk/client-s3": "^3.350.0",
     "@aws-sdk/lib-dynamodb": "^3.213.0",
     "@aws-sdk/s3-request-presigner": "^3.213.0",
     "@lambda-middleware/cors": "^2.0.0",
