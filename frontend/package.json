@@ -13,7 +13,7 @@
     "path": false
   },
   "dependencies": {
-    "@aws-sdk/credential-providers": "^3.266.1",
+    "@aws-sdk/credential-providers": "^3.351.0",
     "@mdi/font": "5.9.55",
     "amazon-cognito-identity-js": "^6.0.1",
     "aws-iot-device-sdk-v2": "^1.9.5",
