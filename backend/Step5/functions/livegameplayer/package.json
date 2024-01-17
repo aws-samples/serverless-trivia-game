@@ -6,9 +6,9 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-apigatewaymanagementapi": "^3.350.0",
-    "@aws-sdk/client-dynamodb": "^3.351.0",
-    "@aws-sdk/client-eventbridge": "^3.350.0",
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.490.0",
+    "@aws-sdk/client-dynamodb": "^3.494.0",
+    "@aws-sdk/client-eventbridge": "^3.490.0",
     "@aws-sdk/lib-dynamodb": "^3.241.0",
     "esbuild": "^0.14.14"
   },
