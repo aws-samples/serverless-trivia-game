@@ -6,8 +6,8 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-iot-data-plane": "^3.350.0",
-    "@aws-sdk/client-kinesis": "^3.350.0",
+    "@aws-sdk/client-iot-data-plane": "^3.490.0",
+    "@aws-sdk/client-kinesis": "^3.490.0",
     "esbuild": "^0.14.14",
     "redis": "^4.5.1"
   },
