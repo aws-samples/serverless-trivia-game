@@ -6,7 +6,7 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-sns": "^3.350.0",
+    "@aws-sdk/client-sns": "^3.490.0",
     "@lambda-middleware/cors": "^2.0.0",
     "esbuild": "^0.14.14"
   },
