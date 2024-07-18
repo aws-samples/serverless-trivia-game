@@ -32,3 +32,4 @@ lerna-debug.log*
 frontend/.DS_Store/*
 frontend/public/.DS_Store/*
 frontend/src/assets/.DS_Store
+frontend/src/services/AWSConfig.js
