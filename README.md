@@ -208,6 +208,6 @@ Remove the stack using the following commmands:
 
 Some of the stacks, namely sts-rest and sts-analtyics, contain S3 buckets that will not be deleted if they contain data. If this occurs to you, navigate to the CloudFormation console and find the stacks. Select the resources tab and carefully empty the buckets that remain as resources in the stack before trying to delete the stack again.
 
-Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+Copyright 2025 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 SPDX-License-Identifier: MIT-0
