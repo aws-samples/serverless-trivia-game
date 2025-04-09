@@ -11,7 +11,7 @@
     "@aws-sdk/client-sns": "^3.490.0",
     "@aws-sdk/lib-dynamodb": "^3.213.0",
     "@lambda-middleware/cors": "^2.0.0",
-    "esbuild": "^0.14.14"
+    "esbuild": "^0.25.2"
   },
   "scripts": {
     "unit": "jest",
