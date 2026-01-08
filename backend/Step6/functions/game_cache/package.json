@@ -6,10 +6,10 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.494.0",
-    "@aws-sdk/client-eventbridge": "^3.490.0",
-    "@aws-sdk/client-iot-data-plane": "^3.490.0",
-    "@aws-sdk/client-sns": "^3.490.0",
+    "@aws-sdk/client-dynamodb": "^3.965.0",
+    "@aws-sdk/client-eventbridge": "^3.965.0",
+    "@aws-sdk/client-iot-data-plane": "^3.965.0",
+    "@aws-sdk/client-sns": "^3.965.0",
     "@aws-sdk/lib-dynamodb": "^3.213.0",
     "esbuild": "^0.14.14",
     "redis": "^4.5.1"
