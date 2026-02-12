@@ -11,7 +11,7 @@
     "esbuild": "^0.14.14",
     "http-cache-semantics": "^4.1.1",
     "install": "^0.13.0",
-    "npm": "^10.5.2"
+    "npm": "^11.10.0"
   },
   "scripts": {
     "unit": "jest",
