@@ -10,7 +10,7 @@
     "@aws-sdk/client-eventbridge": "^3.490.0",
     "@aws-sdk/client-sns": "^3.490.0",
     "@aws-sdk/lib-dynamodb": "^3.213.0",
-    "esbuild": "^0.14.14",
+    "esbuild": "^0.27.3",
     "redis": "^4.5.1"
   },
   "scripts": {
@@ -25,11 +25,11 @@
     "@types/node": "^17.0.13",
     "@typescript-eslint/eslint-plugin": "^5.10.2",
     "@typescript-eslint/parser": "^5.10.2",
-    "esbuild-jest": "^0.5.0",
+    "esbuild-jest": "^0.4.0",
     "eslint": "^8.8.0",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-prettier": "^4.0.0",
-    "jest": "^27.5.0",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-plugin-prettier": "^2.7.0",
+    "jest": "^25.0.0",
     "prettier": "^2.5.1",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.5"
