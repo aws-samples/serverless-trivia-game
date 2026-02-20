@@ -10,7 +10,7 @@
     "@aws-sdk/lib-dynamodb": "^3.238.0",
     "esbuild": "^0.14.14",
     "install": "^0.13.0",
-    "npm": "^11.10.0"
+    "npm": "^11.10.1"
   },
   "scripts": {
     "unit": "jest",
