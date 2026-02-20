@@ -1698,7 +1698,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref ActiveGamesListFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
   
   RESTGameActivatePermission:
     Type: AWS::Lambda::Permission
@@ -1707,7 +1708,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref GameActivateFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
   
   RESTGameHeaderPutPermission:
     Type: AWS::Lambda::Permission
@@ -1716,7 +1718,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref GameHeaderPutFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTGameAnswerPermission:
     Type: AWS::Lambda::Permission
@@ -1725,7 +1728,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref GameAnswerFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTLeaderboardGetPermission:
     Type: AWS::Lambda::Permission
@@ -1734,7 +1738,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref LeaderboardGetFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTGamePlayPermission:
     Type: AWS::Lambda::Permission
@@ -1743,7 +1748,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref GamePlayFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTMarketplaceGetPermission:
     Type: AWS::Lambda::Permission
@@ -1752,7 +1758,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref MarketplaceGetFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTPlayerGetPermission:
     Type: AWS::Lambda::Permission
@@ -1761,7 +1768,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref PlayerGetFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTPlayerPutPermission:
     Type: AWS::Lambda::Permission
@@ -1770,7 +1778,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref PlayerPutFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTMyGamesListPermission:
     Type: AWS::Lambda::Permission
@@ -1779,7 +1788,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref MyGamesListFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
       
   RESTGetGamePermission:
     Type: AWS::Lambda::Permission
@@ -1788,7 +1798,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref GameGetFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTGameListOnMarketplacePermission:
     Type: AWS::Lambda::Permission
@@ -1797,7 +1808,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref GameListOnMarketPlaceFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTPlayerProgressPermission:
     Type: AWS::Lambda::Permission
@@ -1806,7 +1818,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref PlayerProgressGetFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTPlayerWalletPermission:
     Type: AWS::Lambda::Permission
@@ -1815,7 +1828,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref PlayerWalletGetFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTPlayerWalletAddPermission:
     Type: AWS::Lambda::Permission
@@ -1824,7 +1838,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref PlayerWalletAddFunction
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"
 
   RESTAuthorizerPermission:
     Type: AWS::Lambda::Permission
@@ -1833,7 +1848,8 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref Authorizer
-      Principal: apigateway.amazonaws.com            
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${STSRESTAPI}/*/*"            
 
   PurchaseGameStateMachine:
     Type: AWS::Serverless::StateMachine

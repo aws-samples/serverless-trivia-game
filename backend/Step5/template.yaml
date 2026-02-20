@@ -169,6 +169,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref OnDisconnectFunction
       Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocket}/*/*"
 #  OnDisconnectVersion:
 #    Type: AWS::Lambda::Version
 #    Properties:
@@ -227,6 +228,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref AuthorizerFunction
       Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocket}/*/*"
   WSAuthorizer:
     Type: AWS::ApiGatewayV2::Authorizer
     Properties: 
@@ -298,6 +300,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref LiveGamePlayerFunction
       Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocket}/*/*"
   LiveGameAdminFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -356,6 +359,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref LiveGameAdminFunction
       Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocket}/*/*"
 
   GameDataDeleteFunction:
     Type: AWS::Serverless::Function
