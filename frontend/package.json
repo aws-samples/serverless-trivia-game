@@ -21,7 +21,7 @@
     "buffer": "^6.0.3",
     "core-js": "^3.8.3",
     "fs": "0.0.1-security",
-    "node-polyfill-webpack-plugin": "^2.0.1",
+    "node-polyfill-webpack-plugin": "^4.1.0",
     "path": "^0.12.7",
     "pinia": "^2.0.23",
     "roboto-fontface": "*",
