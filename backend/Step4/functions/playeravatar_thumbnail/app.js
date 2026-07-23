@@ -16,11 +16,11 @@
 // Function: playeravatar_thumbnail:app.js
 
 /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
-const AWS = require('aws-sdk');
+const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const sharp = require('sharp');
 
-const s3 = new AWS.S3();
+const s3 = new S3Client({});
 
 const playerAvatarBucket = process.env.PLAYER_AVATAR_BUCKET;
 
@@ -28,15 +28,16 @@ exports.handler = async (event) => {
   try {
     console.log(JSON.stringify(event));
     const folders = event.key.split('/');
-    const image = await s3.getObject({ Bucket: event.bucketName, Key: event.key }).promise();
-    const resizedImg = await sharp(image.Body).resize(100, 100, { fit: 'cover' }).toFormat('jpeg').toBuffer();
+    const image = await s3.send(new GetObjectCommand({ Bucket: event.bucketName, Key: event.key }));
+    const imageBytes = await image.Body.transformToByteArray();
+    const resizedImg = await sharp(imageBytes).resize(100, 100, { fit: 'cover' }).toFormat('jpeg').toBuffer();
     //performance fix - store thumbnail in /user/current to allow for calculatable retrieval
     /*const path = event.key.substring(0, event.key.lastIndexOf('/'));
     const thumbnailKey = `${path}/thumb.jpg`;
-    await s3.putObject({ Bucket: event.bucketName, Body: resizedImg, Key: thumbnailKey }).promise();
+    await s3.send(new PutObjectCommand({ Bucket: event.bucketName, Body: resizedImg, Key: thumbnailKey }));
     */
     const thumbnailKey = `${folders[0]}/current/thumb.jpg`;
-    await s3.putObject({ Bucket: playerAvatarBucket, Body: resizedImg, Key: thumbnailKey }).promise();
+    await s3.send(new PutObjectCommand({ Bucket: playerAvatarBucket, Body: resizedImg, Key: thumbnailKey }));
     return {
       status: 200,
       key: thumbnailKey,

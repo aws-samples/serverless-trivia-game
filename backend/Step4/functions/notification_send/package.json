@@ -6,7 +6,6 @@
   "author": "Tim Bruce",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-iot-data-plane": "^3.301.0",
     "@types/web-push": "^3.3.2",
     "esbuild": "^0.14.14",
     "install": "^0.13.0",

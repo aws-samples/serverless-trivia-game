@@ -18,28 +18,12 @@
 
 /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
 import { SNSEvent, SNSMessage } from 'aws-lambda';
-import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 
-const region: string = process.env.REGION!;
-
-const iotdata = new IoTDataPlaneClient({ region: region });
-
-const sendIoTMessage = async(params: PublishCommand) => {
-  try {
-    await iotdata.send(params);
-    return true;
-  } catch (e) {
-    console.error(`error sending to iot ${JSON.stringify(e)} ${JSON.stringify(params)}`);
-    return false;
-  }
-}
-
-const sendChat = async(channel: string, message: string) => {
-  return await sendIoTMessage(new PublishCommand({
-    topic: `chat/${channel}`,
-    payload: new TextEncoder().encode(JSON.stringify({ message })),
-    qos: 0,
-  }));
+// IoT (Step6) fan-out removed for lean scope. Multiplayer chat/leaderboard
+// notifications flow over the WebSocket API (Step5) instead.
+const sendChat = async(channel: string, message: string): Promise<boolean> => {
+  console.log(`chat message for ${channel}: ${message}`);
+  return true;
 }
 
 exports.handler = async (event: SNSEvent) => {

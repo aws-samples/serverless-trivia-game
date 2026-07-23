@@ -22,37 +22,34 @@
 /* eslint consistent-return: "error" */
 /* eslint no-inner-declarations: "error" */
 
-import AWS from 'aws-sdk';
+import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 
 const playersTableName: string = process.env.PLAYERS_TABLE_NAME!;
 const region: string = process.env.REGION!;
 
-AWS.config.apiVersions = { dynamodb: '2012-08-10' };
-AWS.config.update = ({ region: region });
-
-const ddb = new AWS.DynamoDB.DocumentClient();
+const ddbClient = new DynamoDBClient({ region: region });
+const ddb = DynamoDBDocumentClient.from(ddbClient);
 
 const sendData = async(msgcontent: any, connectionData: any, domain: string, tablename: string, stage: string): Promise<any> => {
   delete msgcontent.domainName;
   delete msgcontent.stage;
   delete msgcontent.message.domainName;
   delete msgcontent.message.stage;
-  const props = {
-    apiVersion: '2018-11-29',
-    endpoint: `${domain}/${stage}`,
-  };
-  const apigwManagementApi = new AWS.ApiGatewayManagementApi( props );
+  const endpoint = `https://${domain}/${stage}`;
+  const apigwManagementApi = new ApiGatewayManagementApiClient({ endpoint });
 
   const postCalls = connectionData.Items.map(async ({ connectionId:any }) => {
     try {
       let connId: string = connectionId!;
-      await apigwManagementApi.postToConnection(
-        { ConnectionId: connectionId, Data: JSON.stringify(msgcontent) },
-      ).promise();
+      await apigwManagementApi.send(new PostToConnectionCommand(
+        { ConnectionId: connectionId, Data: new TextEncoder().encode(JSON.stringify(msgcontent)) },
+      ));
     } catch (e) {
       console.log(`${JSON.stringify(e)}`);
       if (e.statusCode !== 410) {
-        console.error(`Error with websocket connections ${JSON.stringify(e)} using ${JSON.stringify(props)}`);
+        console.error(`Error with websocket connections ${JSON.stringify(e)} using ${endpoint}`);
         return { statusCode: 500, body: 'error with websocket connections' };
       } else {
         console.log(`got a 410`);
@@ -118,7 +115,7 @@ async function getData(msg: any): Promise<any> {
         ConsistentRead: true,
       };
       try {
-        connectionData = await ddb.query(parms).promise();
+        connectionData = await ddb.send(new QueryCommand(parms));
         return connectionData;
       } catch (e) {
         console.error(`Error getting liveadmin connection data ${JSON.stringify(e)}`);
@@ -137,7 +134,7 @@ async function getData(msg: any): Promise<any> {
         ConsistentRead: true,
       };
       try {
-        connectionData = await ddb.query(parms).promise();
+        connectionData = await ddb.send(new QueryCommand(parms));
         return connectionData;
       } catch (e) {
         console.error(`Error getting liveplayer connection data ${JSON.stringify(e)}`);

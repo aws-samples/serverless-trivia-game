@@ -17,29 +17,17 @@
 
 /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
 //import { EventBridgeEvent } from 'aws-lambda';
-import { IoTDataPlaneClient, PublishCommand, PublishCommandInput } from '@aws-sdk/client-iot-data-plane';
 //import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 //import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 //import { SSMClient, GetParametersCommand } from "@aws-sdk/client-ssm";
 
 //const webPush = require('web-push');
 
-const region = process.env.REGION!;
-//const endpoint: string = process.env.IOT_ENDPOINT!;
-const iotdata = new IoTDataPlaneClient({ region: region });
-
+// IoT (Step6) fan-out removed for lean scope. Multiplayer notifications flow
+// over the WebSocket API (Step5) instead.
 const sendIoTMessage = async(topic: string, message: any): Promise<boolean> => {
-  try {
-    await iotdata.send(new PublishCommand({
-    topic: `notifications/${topic}`,
-    payload: new TextEncoder().encode(JSON.stringify(message)),
-    qos: 0,
-  }));
-    return true;
-  } catch (e) {
-    console.error(`error sending to iot ${e.name} - ${e.message} : ${JSON.stringify(topic)} ${JSON.stringify(message)}`);
-    return false;
-  }
+  console.log(`notification for ${topic}: ${JSON.stringify(message)}`);
+  return true;
 }
 
 export const handler = async (event: any) => {

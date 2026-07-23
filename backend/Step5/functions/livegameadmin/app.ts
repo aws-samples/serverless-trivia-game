@@ -26,14 +26,12 @@ import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { EventBridgeClient, PutEventsCommand } from "@aws-sdk/client-eventbridge";
-import { KinesisClient, PutRecordCommand } from "@aws-sdk/client-kinesis";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
 const playerProgressTopic: string = process.env.PLAYER_PROGRESS_TOPIC!;
 const highscoreTableName: string = process.env.SCORES_TABLE_NAME!;
 const playerInventoryTableName: string = process.env.PLAYER_INVENTORY_TABLE_NAME!;
 const playersTableName: string = process.env.PLAYERS_TABLE_NAME!;
-const scoreStream: string = process.env.RESPONSE_STREAM!;
 const chatTopicArn: string = process.env.CHAT_TOPIC_ARN!;
 const eventBusName: string = process.env.EVENT_BUS_NAME!;
 const region: string = process.env.REGION!;
@@ -42,7 +40,6 @@ const region: string = process.env.REGION!;
 const ddb = new DynamoDBClient({ region: region});
 const ddbDocClient = DynamoDBDocumentClient.from(ddb);
 const sns = new SNSClient({region: region});
-const kinesis = new KinesisClient({region: region});
 const eb = new EventBridgeClient({region: region});
 
 const dateString = () => {
@@ -275,21 +272,6 @@ const hostGame = async(gameInfo: any, connectionId: string) => {
   }
 }
 
-const sendMessages = async(analytics: any) => {
-  const Data = JSON.stringify({ playerName: analytics.playerName, gameId: analytics.gameId, 
-    dateOfQuiz: dateString(), quizMode: analytics.quizMode, 
-    questions: analytics.questions });
-  let val = await kinesis.send(new PutRecordCommand({
-    Data: new TextEncoder().encode(Data), StreamName: scoreStream, PartitionKey: 'score001'
-  }))
-  if(val.SequenceNumber) {
-    return { statusCode: 200, body: 'analytics sent' };
-  } else {
-    console.error(`error writing to shard: ${JSON.stringify(val)} `);
-    return { statusCode: 500, body: 'error sending to kinesis' };
-  }
-}
-
 const updateProgress = async(progress: any) => {
   try {
     await sns.send(new PublishCommand({ 
@@ -325,7 +307,6 @@ export const handler = async (event: any) => {
       }
       return val;
     case 'analytics':
-      val = await sendMessages(message.analytics);
     case 'progress':
       await updateProgress(message.progress);
       val = { statusCode: 200, body: 'messages sent' };

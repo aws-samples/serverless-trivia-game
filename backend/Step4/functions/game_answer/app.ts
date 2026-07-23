@@ -21,13 +21,11 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
-import { KinesisClient, PutRecordCommand } from "@aws-sdk/client-kinesis";
 import { cors } from "@lambda-middleware/cors";
 
 const questionsTableName: string = process.env.PLAYER_INVENTORY_TABLE_NAME!;
 const playerProgressTopic: string = process.env.PLAYER_PROGRESS_TOPIC!;
 const leaderboardTopic: string = process.env.LEADERBOARD_TOPIC!;
-const scoreStream: string = process.env.RESPONSE_STREAM!;
 const region: string = process.env.REGION!;
 const mainCorsDomain: string = process.env.MAIN_CORS_DOMAIN!;
 
@@ -39,7 +37,6 @@ if (mainCorsDomain !== "*") {
 const ddb = new DynamoDBClient({ region: region});
 const ddbDocClient = DynamoDBDocumentClient.from(ddb);
 const sns = new SNSClient({ region: region});
-const kinesis = new KinesisClient({ region: region});
 
 const dateString = () => {
   const date = new Date();
@@ -82,18 +79,6 @@ const sendLeaderboardMessage = async (leaderboardMsg: string, player: string, ow
     }
   } else {
     return { statusCode: 200, body: { message: 'not needed, player is owner' } };  
-  }
-}
-
-const sendScoreEvents = async(Data: string) => {
-  console.log(`sendScoreEvents ${Data}`);
-  let ret = await kinesis.send(new PutRecordCommand({Data: new TextEncoder().encode(Data), 
-    StreamName: scoreStream, PartitionKey: 'score001' }));
-  if(Object.prototype.hasOwnProperty.call(ret, 'ShardId')){
-    return 1;
-  } else {
-    console.error(`error writing to stream ${JSON.stringify(ret)}`);
-    return { statusCode: 500, body: { error: 'Could not send score events' } };
   }
 }
 
@@ -170,8 +155,6 @@ const scoreGame = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyRe
     });
 
     // done scoring, prepare all messages
-    const analyticMsg = {playerName: playerData.playerName, dateOfQuiz: dateString(), gameId: gameInfo.gameId, 
-      quizMode: gameInfo.quizMode, questions: analytics};
     const score = (points / maxPoints) * 100;
     let scoremsg = { score, answerboard };
     console.log(`scoremsg: ${JSON.stringify(scoremsg)}`)
@@ -186,8 +169,7 @@ const scoreGame = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyRe
     console.log(`leaderboardmsg: ${JSON.stringify(leaderboardmsg)}`)
     await Promise.all(
       [sendProgressMessage(progressmsg, playerData.playerName, owner),
-        sendLeaderboardMessage(leaderboardmsg, playerData.playerName, owner),
-        sendScoreEvents(JSON.stringify(analyticMsg))],
+        sendLeaderboardMessage(leaderboardmsg, playerData.playerName, owner)],
     )
       .catch((e) => {
         console.error(`error sending progress ${JSON.stringify(e.stack)}`);
