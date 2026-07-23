@@ -1,0 +1,54 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::894566154964:role/trivia-github-deploy
+          aws-region: eu-central-1
+
+      - name: Update function code
+        run: ./scripts/deploy-functions.sh
+
+      - name: Fetch stack outputs
+        run: |
+          TRIVIA_OUTPUTS="$(aws ssm get-parameter --name trivia-frontend-config --query 'Parameter.Value' --output text)"
+          echo "TRIVIA_OUTPUTS=${TRIVIA_OUTPUTS}" >> "$GITHUB_ENV"
+          echo "FRONTEND_BUCKET=$(echo "$TRIVIA_OUTPUTS" | jq -r '.frontendBucket')" >> "$GITHUB_ENV"
+          echo "DISTRIBUTION_ID=$(echo "$TRIVIA_OUTPUTS" | jq -r '.distributionId')" >> "$GITHUB_ENV"
+
+      - name: Write frontend AWS config
+        run: node scripts/write-aws-config.mjs
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Sync frontend to S3
+        run: aws s3 sync frontend/dist "s3://${FRONTEND_BUCKET}" --delete
+
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id "${DISTRIBUTION_ID}" --paths '/*'

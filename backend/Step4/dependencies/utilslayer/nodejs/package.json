@@ -3,9 +3,8 @@
       "version": "1.0.1",
       "author": "Ryan Waters",
       "dependencies": {
+            "@aws-sdk/client-cloudwatch": "^3.490.0",
             "aws-embedded-metrics": "^2.0.0",
-            "aws-sdk": "^2.1354.0",
-            "aws-xray-sdk-core": "^3.0.1",
             "lambda-log": "^2.4.0",
             "uuid": "^8.1.0"
       }

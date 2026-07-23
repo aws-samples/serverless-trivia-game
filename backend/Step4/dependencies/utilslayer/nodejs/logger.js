@@ -13,9 +13,13 @@
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-const AWSXRay = require('aws-xray-sdk-core')
-const AWS = AWSXRay.captureAWS(require('aws-sdk'))
-const cloudwatch = new AWS.CloudWatch()
+// Was: `AWSXRay.captureAWS(require('aws-sdk'))` — AWS SDK v2 has no build for the
+// `nodejs24.x` Lambda runtime, and the X-Ray capture wrapper is no longer needed:
+// telemetry (traces + logs) is now shipped by the OTel collector Lambda layer
+// (see `createLambda` in infrastructure-as-code). Swapped to the SDK v3 modular
+// client so this file (and anything that bundles it) never pulls in `aws-sdk`.
+const {CloudWatchClient, PutMetricDataCommand} = require('@aws-sdk/client-cloudwatch')
+const cloudwatch = new CloudWatchClient({})
 const log = require('lambda-log')
 const MetricUnit = require('./models')
 const { createMetricsLogger, Unit } = require("aws-embedded-metrics")
@@ -81,7 +85,7 @@ exports.putMetric = async (name, unit = MetricUnit.Count, value = 0, options) =>
     try {
         log.debug(`Creating custom metric ${name}`)
         const metric = buildMetricData(name, unit, value, options)
-        await cloudwatch.putMetricData(metric).promise()
+        await cloudwatch.send(new PutMetricDataCommand(metric))
     } catch (err) {
         log.error({ operation: options.operation !== undefined ? options.operation : 'undefined_operation', method: 'putMetric', details: err })
         throw err
