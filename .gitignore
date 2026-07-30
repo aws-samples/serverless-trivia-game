@@ -33,4 +33,6 @@ frontend/.DS_Store/*
 frontend/public/.DS_Store/*
 frontend/src/assets/.DS_Store
 frontend/src/services/AWSConfig.js
+# Per-handler bundles produced by scripts/deploy-functions.sh
+function.zip
 SECURITY_FIX_SUMMARY.md

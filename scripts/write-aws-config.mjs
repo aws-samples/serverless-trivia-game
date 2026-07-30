@@ -22,17 +22,34 @@ try {
   process.exit(1)
 }
 
-const required = ['region', 'httpApiUrl', 'wsApiUrl', 'identityPoolId', 'userPoolId', 'appClientId']
+// Key names match the SSM parameter written by the Pulumi stack
+// (projects/demo/trivia/outputs.ts) — `httpapi`/`wsapi`, not the camelCase
+// stack-output names.
+const required = [
+  'appName',
+  'region',
+  'httpapi',
+  'wsapi',
+  'iotapi',
+  'identityPoolId',
+  'userPoolId',
+  'appClientId',
+]
 const missing = required.filter((key) => outputs[key] === undefined || outputs[key] === null)
 if (missing.length > 0) {
   console.error(`ERROR: TRIVIA_OUTPUTS is missing required key(s): ${missing.join(', ')}`)
   process.exit(1)
 }
 
+// Shape matches the upstream `backend/Step7/generateAWSConfig.sh` output that
+// this script replaces: App.vue reads `appName`/`iotapi`, Api.js reads
+// `httpapi`, Cognito.js reads the pool ids.
 const config = {
+  appName: outputs.appName,
   region: outputs.region,
-  httpapi: outputs.httpApiUrl,
-  wsapi: outputs.wsApiUrl,
+  httpapi: outputs.httpapi,
+  wsapi: outputs.wsapi,
+  iotapi: outputs.iotapi,
   identityPoolId: outputs.identityPoolId,
   userPoolId: outputs.userPoolId,
   appClientId: outputs.appClientId,
