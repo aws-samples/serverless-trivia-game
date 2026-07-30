@@ -19,7 +19,11 @@
 /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
 import { PreSignUpTriggerEvent } from 'aws-lambda';
 
-export const handler = (event: any, context: any, callback: any) => {
+// Async handler returning the event, rather than the callback style this used to
+// use: Lambda dropped callback-based handlers in nodejs24.x, which failed every
+// sign-up with "AWS Lambda has removed support for callback-based function
+// handlers". A Cognito trigger must return the (possibly mutated) event.
+export const handler = async (event: PreSignUpTriggerEvent): Promise<PreSignUpTriggerEvent> => {
   event.response.autoConfirmUser = true;
-  callback(null, event);
+  return event;
 };

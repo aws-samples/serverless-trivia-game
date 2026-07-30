@@ -48,7 +48,7 @@ const generatePolicy = (effect: string, arn: string): PolicyDocument => {
     return policyDocument;      
   }
 }
-export const handler = async(event: any, context: any, callback: any) => {
+export const handler = async(event: any) => {
   // Do not print the auth token unless absolutely necessary
   console.log(JSON.stringify(event));
   const token = event.queryStringParameters.access_token;
@@ -87,7 +87,9 @@ export const handler = async(event: any, context: any, callback: any) => {
     } as AuthResponse
   } catch(e) {
     console.log('cannot verify');
-    context.fail('Unauthorized');
+    // Throwing is how an async handler denies. `context.fail()` used to precede
+    // this throw, but it belongs to the same callback-era API that nodejs24.x
+    // removed, so on the deny path it would have raised a TypeError instead.
     throw new Error("Unauthorized");
   }
 };
