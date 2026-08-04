@@ -75,20 +75,41 @@ while IFS=$'\t' read -r handler_dir function_name; do
     rm -rf dist function.zip
     npm ci --no-audit --no-fund --silent --omit=dev
 
-    # sharp (playeravatar_thumbnail) ships native platform binaries — esbuild
-    # can't inline a .node binary into a single-file bundle, so it stays
-    # external and its node_modules/sharp tree is zipped alongside app.js.
-    esbuild_args=(--bundle --platform=node --target=node20 --outfile=dist/app.js)
+    # The AWS SDK stays external so the OpenTelemetry layer can instrument it.
+    # `instrumentation-aws-sdk` hooks module loads of `@aws-sdk/*`; a copy that
+    # esbuild has inlined and minified into app.js is never loaded as a module,
+    # so it is never patched. Bundling it cost us every AWS span: DynamoDB and
+    # SNS calls showed up as bare `POST` client spans from the http
+    # instrumentation (which patches node's core http, and so survives
+    # bundling), carrying no messaging/rpc attributes for a service graph to
+    # draw a dependency from -- and, worse, no `traceparent` injected into SNS
+    # MessageAttributes, so a published message could not be correlated with
+    # the function that consumed it.
+    #
+    # sharp (playeravatar_thumbnail) ships native platform binaries, which
+    # esbuild cannot inline into a single-file bundle at all.
+    esbuild_args=(
+      --bundle
+      --platform=node
+      --target=node20
+      --outfile=dist/app.js
+      '--external:@aws-sdk/*'
+    )
     if [ -f package.json ] && grep -q '"sharp"' package.json; then
       esbuild_args+=(--external:sharp)
     fi
 
     npx --yes esbuild "$entry" "${esbuild_args[@]}"
 
+    # Everything external has to be resolvable at runtime, so node_modules ships
+    # with the bundle. The whole tree, not just node_modules/@aws-sdk: npm's
+    # layout is flat, so the SDK's own dependencies (@smithy/*, @aws-crypto/*,
+    # tslib, ...) sit next to it rather than inside it. This is deliberately not
+    # relying on the SDK the nodejs runtime provides -- that would ship nothing
+    # at all, but it pins us to whatever version the runtime carries and assumes
+    # it includes @aws-sdk/lib-dynamodb, which several handlers import.
     (cd dist && zip -q -r ../function.zip app.js)
-    if [ -d node_modules/sharp ]; then
-      zip -q -r function.zip node_modules
-    fi
+    zip -q -r function.zip node_modules
   ); then
     :
   else
